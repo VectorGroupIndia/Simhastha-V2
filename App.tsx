@@ -19,6 +19,7 @@ import LoginPage from './pages/LoginPage';
 import ProfilePage from './pages/ProfilePage';
 import ReportFlowPage from './pages/ReportFlowPage';
 import MyGroupPage from './pages/MyGroupPage';
+import LiveMapPage from './pages/LiveMapPage';
 
 // Admin Pages
 import AdminDashboard from './pages/admin/AdminDashboard';
@@ -49,11 +50,12 @@ const AppContent: React.FC = () => {
     }, []);
     
     const isHomePage = location.pathname === '/';
+    const isMapPage = location.pathname === '/live-map';
 
     return (
-        <div className={`flex flex-col min-h-screen ${isHomePage ? 'bg-brand-bg' : 'bg-brand-glass-bg text-white'}`}>
-            <Header />
-            <main className="flex-grow">
+        <div className={`flex flex-col min-h-screen ${isHomePage ? 'bg-brand-bg' : 'bg-brand-glass-bg text-white'} ${isMapPage ? 'h-screen overflow-hidden' : ''}`}>
+            {!isMapPage && <Header />}
+            <main className={`flex-grow ${isMapPage ? 'h-full' : ''}`}>
                 <Routes>
                     <Route path="/" element={<HomePage />} />
                     <Route path="/about" element={<AboutPage />} />
@@ -64,6 +66,7 @@ const AppContent: React.FC = () => {
                     
                     <Route path="/profile" element={<ProtectedRoute><ProfilePage /></ProtectedRoute>} />
                     <Route path="/my-group" element={<ProtectedRoute role="user"><MyGroupPage /></ProtectedRoute>} />
+                    <Route path="/live-map" element={<ProtectedRoute><LiveMapPage /></ProtectedRoute>} />
 
                     {/* Admin Routes */}
                     <Route path="/admin" element={<ProtectedRoute role="admin"><AdminDashboard /></ProtectedRoute>} />
@@ -82,7 +85,7 @@ const AppContent: React.FC = () => {
                     <Route path="/volunteer" element={<ProtectedRoute role="volunteer"><VolunteerDashboard /></ProtectedRoute>} />
                 </Routes>
             </main>
-            <Footer />
+            {!isMapPage && <Footer />}
             {showLanguagePopup && <LanguageSelectorPopup onClose={() => setShowLanguagePopup(false)} />}
         </div>
     );

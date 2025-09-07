@@ -62,6 +62,9 @@ const Header: React.FC = () => {
             <NavLink to="/about" className={navLinkClass}>{t.navAbout}</NavLink>
             <NavLink to="/contact" className={navLinkClass}>{t.navContact}</NavLink>
             <NavLink to="/report" className={navLinkClass}>{t.navReport}</NavLink>
+            {user && (
+                 <NavLink to="/live-map" className={navLinkClass}>Live Map</NavLink>
+            )}
             {user && user.role === 'user' && (
                 <NavLink to="/my-group" className={navLinkClass}>{t.navMyGroup}</NavLink>
             )}
@@ -127,6 +130,9 @@ const Header: React.FC = () => {
                 <NavLink to="/about" onClick={() => setIsMenuOpen(false)} className="-mx-3 block rounded-lg px-3 py-2 text-base font-semibold leading-7 text-slate-200 hover:bg-white/10">{t.navAbout}</NavLink>
                 <NavLink to="/contact" onClick={() => setIsMenuOpen(false)} className="-mx-3 block rounded-lg px-3 py-2 text-base font-semibold leading-7 text-slate-200 hover:bg-white/10">{t.navContact}</NavLink>
                 <NavLink to="/report" onClick={() => setIsMenuOpen(false)} className="-mx-3 block rounded-lg px-3 py-2 text-base font-semibold leading-7 text-slate-200 hover:bg-white/10">{t.navReport}</NavLink>
+                 {user && (
+                    <NavLink to="/live-map" onClick={() => setIsMenuOpen(false)} className="-mx-3 block rounded-lg px-3 py-2 text-base font-semibold leading-7 text-slate-200 hover:bg-white/10">Live Map</NavLink>
+                )}
                 {user && user.role === 'user' && (
                     <NavLink to="/my-group" onClick={() => setIsMenuOpen(false)} className="-mx-3 block rounded-lg px-3 py-2 text-base font-semibold leading-7 text-slate-200 hover:bg-white/10">{t.navMyGroup}</NavLink>
                 )}

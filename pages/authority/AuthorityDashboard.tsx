@@ -8,6 +8,7 @@ import BarChart from '../../components/charts/BarChart';
 import ConfirmationModal from '../../components/ConfirmationModal';
 import { SosRequest } from '../volunteer/VolunteerDashboard';
 import AuthoritySidebar from './components/AuthoritySidebar';
+import { Link } from 'react-router-dom';
 
 // Icons
 const SosIcon = (props: React.SVGProps<SVGSVGElement>) => <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="2" stroke="currentColor" {...props}><path strokeLinecap="round" strokeLinejoin="round" d="M18.364 5.636a9 9 0 010 12.728M11.636 8.364a5 5 0 010 7.072M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>;
@@ -34,6 +35,7 @@ const AuthorityDashboard: React.FC = () => {
     const [sosToResolve, setSosToResolve] = useState<SosRequest | null>(null);
     const [broadcastMessage, setBroadcastMessage] = useState('');
     const [broadcastSuccess, setBroadcastSuccess] = useState(false);
+    const [reportToAction, setReportToAction] = useState<{ report: Report; action: 'verify' | 'reject' } | null>(null);
     const volunteers = mockUsers.filter(u => u.role === 'volunteer');
 
     const loadSosData = () => {
@@ -117,12 +119,24 @@ const AuthorityDashboard: React.FC = () => {
     }, [allReports, translateStatus]);
 
 
-    const handleReportAction = (id: string, action: 'verify' | 'reject') => {
-        // In a real app, this would update the backend. Here we just remove it from the queue.
-        setPendingReports(pendingReports.filter(r => r.id !== id));
-        alert(`Report ${id} has been ${action}ed.`);
+    const handleReportAction = (report: Report, action: 'verify' | 'reject') => {
+        setReportToAction({ report, action });
     };
-    
+
+    const handleConfirmReportAction = () => {
+        if (!reportToAction) return;
+        const { report, action } = reportToAction;
+        // FIX: Explicitly typed `newStatus` as `ReportStatus` to fix a type inference issue where the status property of the updated report object was being inferred as a generic `string` instead of the more specific `ReportStatus` type.
+        const newStatus: ReportStatus = action === 'verify' ? 'in_review' : 'closed';
+        
+        const updatedReports = allReports.map(r => r.id === report.id ? { ...r, status: newStatus } : r);
+        
+        localStorage.setItem('foundtastic-all-reports', JSON.stringify(updatedReports));
+        setAllReports(updatedReports);
+        setPendingReports(prev => prev.filter(r => r.id !== report.id));
+        setReportToAction(null);
+    };
+
     const handleConfirmResolveSos = () => {
         if (!sosToResolve) return;
         const updatedSosRequests = sosRequests.map(sos => 
@@ -237,7 +251,7 @@ const AuthorityDashboard: React.FC = () => {
                     <div className="flex justify-between items-center mb-4 border-b pb-3">
                          <h2 className="text-xl font-bold text-gray-800">{t.authorityReportsAnalytics}</h2>
                          <button onClick={handleExportCSV} className="px-4 py-2 bg-brand-primary text-white font-semibold text-sm rounded-md hover:bg-brand-primary/90 transition-colors flex items-center">
-                            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-2" fill="none" viewBox="0 0 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
                             {t.authorityExportCSV}
                         </button>
                     </div>
@@ -250,13 +264,12 @@ const AuthorityDashboard: React.FC = () => {
                              <h3 className="text-lg font-semibold text-center text-gray-700 mb-4">{t.authorityReportsByStatus}</h3>
                              <BarChart data={reportStatusData} />
                         </div>
-                        <div className="lg:col-span-3 bg-gray-50 p-4 rounded-lg border flex flex-col items-center justify-center min-h-[200px]">
+                        <div className="lg:col-span-3 bg-white p-4 rounded-lg border flex flex-col items-center justify-center min-h-[200px]">
                              <h3 className="text-lg font-semibold text-gray-700">{t.authorityLocationHeatmap}</h3>
-                             <p className="text-gray-500 mt-2">{t.comingSoon}</p>
-                              <svg xmlns="http://www.w3.org/2000/svg" className="h-12 w-12 text-gray-300 mt-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-                              </svg>
+                             <p className="text-gray-500 mt-2 text-center">View a live map of all reports, SOS alerts, and personnel locations to get a complete operational overview.</p>
+                             <Link to="/live-map" className="mt-4 px-6 py-2 bg-brand-primary text-white font-semibold text-sm rounded-md hover:bg-brand-primary/90 transition-colors">
+                                 Open Live Map
+                             </Link>
                         </div>
                     </div>
                 </div>
@@ -278,8 +291,8 @@ const AuthorityDashboard: React.FC = () => {
                                         </div>
                                     </div>
                                     <div className="flex space-x-2">
-                                        <button onClick={() => handleReportAction(report.id, 'verify')} className="px-3 py-1 text-sm font-medium text-white bg-green-600 rounded-md hover:bg-green-700">{t.authorityActionVerify}</button>
-                                        <button onClick={() => handleReportAction(report.id, 'reject')} className="px-3 py-1 text-sm font-medium text-white bg-red-600 rounded-md hover:bg-red-700">{t.authorityActionReject}</button>
+                                        <button onClick={() => handleReportAction(report, 'verify')} className="px-3 py-1 text-sm font-medium text-white bg-green-600 rounded-md hover:bg-green-700">{t.authorityActionVerify}</button>
+                                        <button onClick={() => handleReportAction(report, 'reject')} className="px-3 py-1 text-sm font-medium text-white bg-red-600 rounded-md hover:bg-red-700">{t.authorityActionReject}</button>
                                     </div>
                                 </div>
                             )) : <p className="text-center text-gray-500 py-8">{t.authorityNoPendingReports}</p>}
@@ -332,6 +345,17 @@ const AuthorityDashboard: React.FC = () => {
                 message={<p>Are you sure you want to mark this SOS alert for "<strong>{sosToResolve?.message}</strong>" as resolved?</p>}
                 confirmText="Yes, mark as resolved"
                 variant="info"
+            />
+            
+            {/* Report Action Confirmation Modal */}
+            <ConfirmationModal
+                isOpen={!!reportToAction}
+                onClose={() => setReportToAction(null)}
+                onConfirm={handleConfirmReportAction}
+                title={`Confirm Report ${reportToAction?.action}`}
+                message={<p>Are you sure you want to {reportToAction?.action} the report for <strong>{reportToAction?.report.item}</strong>?</p>}
+                confirmText={`Yes, ${reportToAction?.action}`}
+                variant={reportToAction?.action === 'reject' ? 'danger' : 'info'}
             />
 
             {/* SOS Details Modal */}

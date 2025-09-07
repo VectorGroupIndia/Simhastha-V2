@@ -16,6 +16,7 @@ export interface Report {
     date: string;
     status: ReportStatus;
     location: string;
+    coords?: { lat: number; lng: number };
     imageUrl: string;
     matches?: string[];
     resolvedDate?: string;

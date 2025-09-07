@@ -45,132 +45,6 @@ const InfoIcon = (props: React.SVGProps<SVGSVGElement>) => <svg xmlns="http://ww
 const MapIcon = (props: React.SVGProps<SVGSVGElement>) => <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" {...props}><path strokeLinecap="round" strokeLinejoin="round" d="M9 6.75V15m6-6v8.25m.503 3.498l4.875-2.437c.381-.19.622-.58.622-1.006V4.82c0-.836-.88-1.37-1.716-.998L9.75 7.5l-4.875-2.437c-.381-.19-.622-.58-.622-1.006V19.18c0 .836.88 1.37 1.716.998l4.875-2.437a1.5 1.5 0 011.022 0l4.122 2.061a1.5 1.5 0 001.022 0z" /></svg>;
 
 
-// Bounding box for Ujjain area for positioning markers
-const MAP_BOUNDS = {
-    latMin: 23.15,
-    latMax: 23.22,
-    lngMin: 75.74,
-    lngMax: 75.82,
-};
-
-const convertCoordsToPosition = (lat: number, lng: number) => {
-    // Clamping the values to stay within the box
-    const clampedLat = Math.max(MAP_BOUNDS.latMin, Math.min(MAP_BOUNDS.latMax, lat));
-    const clampedLng = Math.max(MAP_BOUNDS.lngMin, Math.min(MAP_BOUNDS.lngMax, lng));
-
-    const top = ((MAP_BOUNDS.latMax - clampedLat) / (MAP_BOUNDS.latMax - MAP_BOUNDS.latMin)) * 100;
-    const left = ((clampedLng - MAP_BOUNDS.lngMin) / (MAP_BOUNDS.lngMax - MAP_BOUNDS.lngMin)) * 100;
-    
-    // Ensure the values are within 0-100 range after calculation
-    return {
-        top: `${Math.max(0, Math.min(100, top))}%`,
-        left: `${Math.max(0, Math.min(100, left))}%`,
-    };
-};
-
-const getMarkerClasses = (status: 'new' | 'acknowledged' | 'resolved', type: 'emergency' | 'sighting') => {
-    const baseColor = type === 'emergency' ? 'red' : 'blue';
-    const acknowledgedColor = 'yellow';
-
-    switch (status) {
-        case 'new':
-            return {
-                ping: `animate-ping bg-${baseColor}-400`,
-                dot: `bg-${baseColor}-600`
-            };
-        case 'acknowledged':
-            return {
-                ping: `animate-ping bg-${acknowledgedColor}-400`,
-                dot: `bg-${acknowledgedColor}-500`
-            };
-        case 'resolved':
-            return {
-                ping: '', // No ping for resolved
-                dot: 'bg-green-600'
-            };
-        default:
-             return {
-                ping: '',
-                dot: 'bg-gray-500'
-            };
-    }
-}
-
-const SosMapView: React.FC<{ 
-    requests: SosRequest[];
-    onMarkerClick: (id: string) => void;
-    onViewDetails: (request: SosRequest) => void;
-    activeMarkerId: string | null;
-    onCloseInfoWindow: () => void;
-}> = ({ requests, onMarkerClick, onViewDetails, activeMarkerId, onCloseInfoWindow }) => {
-    const { t } = useLanguage();
-    const activeRequest = requests.find(r => r.id === activeMarkerId);
-    let infoWindowPosition = { top: '0%', left: '0%' };
-    if (activeRequest) {
-        const pos = convertCoordsToPosition(activeRequest.location.lat, activeRequest.location.lng);
-        infoWindowPosition = pos;
-    }
-
-    return (
-        <div className="bg-white p-6 rounded-lg shadow-md">
-            <h2 className="text-xl font-bold text-gray-800 mb-4 flex items-center">
-                <MapIcon className="h-6 w-6 text-brand-primary mr-3" />
-                {t.volunteerSosMapViewTitle}
-            </h2>
-            <div className="relative w-full h-96 bg-gray-200 rounded-lg overflow-hidden border">
-                <iframe
-                    className="absolute top-0 left-0 w-full h-full border-0 pointer-events-none"
-                    loading="lazy"
-                    allowFullScreen
-                    referrerPolicy="no-referrer-when-downgrade"
-                    src={`https://maps.google.com/maps?q=Ujjain&t=&z=13&ie=UTF8&iwloc=&output=embed`}
-                ></iframe>
-                
-                {requests.map(req => {
-                    const { top, left } = convertCoordsToPosition(req.location.lat, req.location.lng);
-                    const { ping, dot } = getMarkerClasses(req.status, req.type);
-                    return (
-                        <button
-                            key={req.id}
-                            onClick={() => onMarkerClick(req.id)}
-                            className="absolute transform -translate-x-1/2 -translate-y-1/2 cursor-pointer z-10"
-                            style={{ top, left }}
-                            aria-label={`SOS from ${req.userName}`}
-                        >
-                            <span className="relative flex h-4 w-4">
-                                {ping && <span className={`absolute inline-flex h-full w-full rounded-full opacity-75 ${ping}`}></span>}
-                                <span className={`relative inline-flex rounded-full h-4 w-4 border-2 border-white ${dot}`}></span>
-                            </span>
-                        </button>
-                    );
-                })}
-
-                {/* Info Window */}
-                {activeRequest && (
-                    <div
-                        className="absolute bg-white rounded-lg shadow-lg p-3 w-56 transform -translate-y-full -translate-x-1/2 z-20"
-                        style={{ ...infoWindowPosition, top: `calc(${infoWindowPosition.top} - 1.5rem)` }} // offset above marker
-                    >
-                         <button onClick={onCloseInfoWindow} className="absolute top-1 right-1 text-gray-400 hover:text-gray-700">
-                             <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" /></svg>
-                         </button>
-                         <p className="font-bold text-sm text-brand-dark truncate">{activeRequest.userName}</p>
-                         <p className="text-xs text-gray-600 mt-1 line-clamp-2">{activeRequest.message}</p>
-                         <p className="text-xs text-gray-400 mt-1">{activeRequest.timestamp}</p>
-                         <button
-                            onClick={() => { onViewDetails(activeRequest); onCloseInfoWindow(); }}
-                            className="mt-2 w-full text-center px-3 py-1 bg-brand-secondary text-white text-xs font-bold rounded hover:opacity-90"
-                         >
-                            {t.volunteerMapInfoViewDetails}
-                         </button>
-                    </div>
-                )}
-            </div>
-        </div>
-    );
-};
-
-
 const VolunteerDashboard: React.FC = () => {
     const { t } = useLanguage();
     const { user } = useAuth();
@@ -181,7 +55,6 @@ const VolunteerDashboard: React.FC = () => {
     const [selectedSos, setSelectedSos] = useState<SosRequest | null>(null);
     const [sosMessage, setSosMessage] = useState('');
     const [sosToAcknowledge, setSosToAcknowledge] = useState<SosRequest | null>(null);
-    const [activeMarker, setActiveMarker] = useState<string | null>(null);
     const newFoundItems = mockReports.filter(r => r.type === 'found').slice(0, 5);
 
     const loadSosData = () => {
@@ -297,27 +170,11 @@ const VolunteerDashboard: React.FC = () => {
             <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-12">
                 <DashboardHeader title={t.volunteerDashboardTitle} />
                 
-                <div className="mb-8">
-                    <Link to="/report" className="inline-flex items-center justify-center w-full md:w-auto px-6 py-3 border border-transparent text-base font-medium rounded-md shadow-sm text-white bg-brand-secondary hover:bg-brand-secondary/90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand-secondary">
-                        <ReportIcon />
-                        {t.volunteerFileNewReport}
-                    </Link>
-                </div>
-
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                    {/* Main operational column */}
+                    {/* Main operational column - REORDERED FOR UX */}
                     <div className="lg:col-span-2 space-y-8">
-                         {/* SOS Map View */}
-                        <SosMapView
-                            requests={sosRequests}
-                            activeMarkerId={activeMarker}
-                            onMarkerClick={(id) => setActiveMarker(id === activeMarker ? null : id)}
-                            onViewDetails={(req) => setSelectedSos(req)}
-                            onCloseInfoWindow={() => setActiveMarker(null)}
-                        />
-
-                         {/* SOS Card */}
-                         <div className="bg-red-50 border border-red-200 p-6 rounded-lg shadow-md text-center">
+                        {/* SOS Card - MOST IMPORTANT ACTION, MOVED TO TOP */}
+                         <div className="bg-red-50 border-2 border-red-300 border-dashed p-6 rounded-lg shadow-lg text-center">
                             <h2 className="text-xl font-bold text-red-800 mb-2">{t.volunteerSosCardTitle}</h2>
                             <p className="text-sm text-red-700 mb-4">{t.volunteerSosCardDescription}</p>
                             <button 
@@ -329,7 +186,7 @@ const VolunteerDashboard: React.FC = () => {
                             </button>
                         </div>
                         
-                        {/* SOS & Sighting Alerts */}
+                        {/* SOS & Sighting Alerts - HIGH PRIORITY INFO */}
                         <div className="bg-white p-6 rounded-lg shadow-md">
                             <h2 className="text-xl font-bold text-gray-800 mb-4 flex items-center">
                                 <SosIcon className="h-6 w-6 text-brand-primary mr-3" />
@@ -397,6 +254,18 @@ const VolunteerDashboard: React.FC = () => {
                                 )) : <p className="text-center text-gray-500 py-8">{t.volunteerNoTasks}</p>}
                              </div>
                         </div>
+
+                         {/* Live Map Link Card */}
+                        <div className="bg-white p-6 rounded-lg shadow-md">
+                            <h2 className="text-xl font-bold text-gray-800 mb-4 flex items-center">
+                                <MapIcon className="h-6 w-6 text-brand-primary mr-3" />
+                                {t.volunteerSosMapViewTitle}
+                            </h2>
+                            <p className="text-slate-600 mb-4">View a live map of all active SOS alerts, recent reports, and volunteer locations.</p>
+                            <Link to="/live-map" className="inline-flex items-center justify-center w-full px-6 py-3 border border-transparent text-base font-medium rounded-md shadow-sm text-white bg-brand-primary hover:bg-brand-primary/90">
+                                Open Live Map
+                            </Link>
+                        </div>
                     </div>
 
                     {/* Side column */}
@@ -407,6 +276,13 @@ const VolunteerDashboard: React.FC = () => {
                                 <p className="text-gray-900 font-semibold">{user?.name}</p>
                                 <span className="px-3 py-1 text-sm font-semibold rounded-full bg-green-100 text-green-800">{t.volunteerStatusActive}</span>
                             </div>
+                        </div>
+                        
+                        <div className="bg-white p-6 rounded-lg shadow-md">
+                             <Link to="/report" className="inline-flex items-center justify-center w-full px-6 py-3 border border-transparent text-base font-medium rounded-md shadow-sm text-white bg-brand-secondary hover:bg-brand-secondary/90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand-secondary mb-4">
+                                <ReportIcon />
+                                {t.volunteerFileNewReport}
+                            </Link>
                         </div>
 
                         <div className="bg-white p-6 rounded-lg shadow-md">

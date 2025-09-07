@@ -17,6 +17,7 @@ export interface User {
 
 export interface FullUser extends User {
     status: UserStatus;
+    lastKnownLocation?: { lat: number; lng: number; timestamp: string };
 }
 
 interface AuthData {
@@ -134,6 +135,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                     avatarUrl: `https://i.pravatar.cc/150?u=${email}`,
                     groupIds: [],
                     activeGroupId: null,
+                    lastKnownLocation: { lat: 23.1795, lng: 75.7831, timestamp: new Date().toISOString() }, // Default location for new user
                 };
                 
                 const newAuthData: AuthData = { email, password: pass };

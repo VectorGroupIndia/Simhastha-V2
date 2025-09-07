@@ -5,6 +5,8 @@ import { mockReports, mockUsers } from '../../data/mockData';
 import { Report } from '../ProfilePage';
 import DashboardHeader from '../../components/DashboardHeader';
 import { PlatformSettings } from './SettingsPage';
+import ReportDetailsModal from '../../components/ReportDetailsModal';
+import { FullUser } from '../../contexts/AuthContext';
 
 interface SuspiciousReport extends Report {
     reporterName: string;
@@ -14,18 +16,75 @@ interface SuspiciousReport extends Report {
 
 const HIGH_FREQUENCY_THRESHOLD = 3; // reports
 
+const UserDetailsModal: React.FC<{ user: FullUser; onClose: () => void; }> = ({ user, onClose }) => {
+    const { t } = useLanguage();
+    const [userReports, setUserReports] = useState<Report[]>([]);
+
+    useEffect(() => {
+        try {
+            const allReportsStr = localStorage.getItem('foundtastic-all-reports');
+            if (allReportsStr) {
+                // This is a mock: in a real app, reports would have a userId.
+                // Here, we'll just assign some reports to this user for demo purposes.
+                const allReports: Report[] = JSON.parse(allReportsStr);
+                const assignedReports = allReports.slice(0, 5); // Demo: show first 5 reports as this user's
+                setUserReports(assignedReports);
+            }
+        } catch (e) {
+            console.error("Failed to load reports for user", e);
+        }
+    }, [user.id]);
+
+    return (
+        <div className="fixed inset-0 bg-black bg-opacity-60 backdrop-blur-sm flex items-center justify-center z-50 p-4" onClick={onClose}>
+            <div className="bg-white rounded-xl shadow-2xl max-w-2xl w-full transform transition-all" onClick={e => e.stopPropagation()}>
+                <div className="p-6 relative max-h-[90vh] overflow-y-auto">
+                    <button onClick={onClose} className="absolute top-4 right-4 text-slate-400 hover:text-slate-800">
+                        <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
+                    </button>
+                    <div className="flex items-center space-x-4 border-b pb-4 mb-4">
+                        <img src={user.avatarUrl} alt={user.name} className="w-20 h-20 rounded-full" />
+                        <div>
+                            <h2 className="text-2xl font-bold text-gray-800">{user.name}</h2>
+                            <p className="text-gray-600">{user.email}</p>
+                            <p className="text-sm text-gray-500">Role: {user.role}</p>
+                        </div>
+                    </div>
+                    <h3 className="font-bold text-gray-800 mb-2">Reporting History ({userReports.length} reports)</h3>
+                    <div className="space-y-2">
+                        {userReports.length > 0 ? userReports.map(report => (
+                            <div key={report.id} className="p-2 border rounded-md bg-gray-50 flex items-center justify-between">
+                                <div>
+                                    <p className="font-semibold text-sm text-gray-800">{report.item}</p>
+                                    <p className="text-xs text-gray-500">{report.date} - {report.status}</p>
+                                </div>
+                                <span className={`px-2 py-0.5 text-xs font-semibold rounded-full ${report.type === 'lost' ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800'}`}>
+                                    {report.type}
+                                </span>
+                            </div>
+                        )) : <p className="text-sm text-gray-500">No reporting history found for this user.</p>}
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+};
+
+
 const FraudDetection: React.FC = () => {
     const { t } = useLanguage();
     const [reports, setReports] = useState<Report[]>([]);
-    const [users, setUsers] = useState<typeof mockUsers>([]);
+    const [users, setUsers] = useState<FullUser[]>([]);
     const [settings, setSettings] = useState<PlatformSettings | null>(null);
+    const [viewingReport, setViewingReport] = useState<Report | null>(null);
+    const [viewingUser, setViewingUser] = useState<FullUser | null>(null);
 
     useEffect(() => {
         try {
             const storedReports = localStorage.getItem('foundtastic-all-reports');
             setReports(storedReports ? JSON.parse(storedReports) : mockReports);
             const storedUsers = localStorage.getItem('foundtastic-all-users');
-            setUsers(storedUsers ? JSON.parse(storedUsers) : mockUsers);
+            setUsers(storedUsers ? JSON.parse(storedUsers) : mockUsers as FullUser[]);
             const storedSettings = localStorage.getItem('foundtastic-settings');
             if (storedSettings) {
                 setSettings(JSON.parse(storedSettings));
@@ -81,6 +140,13 @@ const FraudDetection: React.FC = () => {
 
         return Object.values(flaggedReports);
     }, [reports, users, t, settings]);
+    
+    const handleViewUser = (email: string) => {
+        const userToView = users.find(u => u.email === email);
+        if (userToView) {
+            setViewingUser(userToView);
+        }
+    };
 
     return (
         <div className="flex min-h-screen bg-gray-50">
@@ -119,8 +185,8 @@ const FraudDetection: React.FC = () => {
                                         <td className="px-6 py-4 whitespace-nowrap text-sm text-red-700 font-semibold">{report.reason}</td>
                                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{report.date}</td>
                                         <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                                            <button className="text-indigo-600 hover:text-indigo-900">{t.fraudActionViewReport}</button>
-                                            <button className="ml-4 text-indigo-600 hover:text-indigo-900">{t.fraudActionViewUser}</button>
+                                            <button onClick={() => setViewingReport(report)} className="text-indigo-600 hover:text-indigo-900">{t.fraudActionViewReport}</button>
+                                            <button onClick={() => handleViewUser(report.reporterEmail)} className="ml-4 text-indigo-600 hover:text-indigo-900">{t.fraudActionViewUser}</button>
                                         </td>
                                     </tr>
                                 )) : (
@@ -132,6 +198,9 @@ const FraudDetection: React.FC = () => {
                         </table>
                     </div>
                 </div>
+
+                {viewingReport && <ReportDetailsModal report={viewingReport} onClose={() => setViewingReport(null)} />}
+                {viewingUser && <UserDetailsModal user={viewingUser} onClose={() => setViewingUser(null)} />}
             </main>
         </div>
     );
