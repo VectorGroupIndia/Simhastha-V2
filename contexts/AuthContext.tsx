@@ -1,0 +1,163 @@
+
+import React, { createContext, useState, useContext, ReactNode, useEffect } from 'react';
+import { mockUsers } from '../data/mockData';
+
+type UserRole = 'user' | 'admin' | 'authority' | 'volunteer';
+type UserStatus = 'active' | 'suspended';
+
+interface User {
+  id: string;
+  name: string;
+  email: string;
+  role: UserRole;
+  memberSince: string;
+}
+
+interface FullUser extends User {
+    status: UserStatus;
+}
+
+interface AuthData {
+    email: string;
+    password: string;
+}
+
+
+interface AuthContextType {
+  user: User | null;
+  login: (email: string, pass: string) => Promise<void>;
+  register: (name: string, email: string, pass: string) => Promise<void>;
+  logout: () => void;
+  loading: boolean;
+}
+
+const AuthContext = createContext<AuthContextType | undefined>(undefined);
+
+export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
+    const [user, setUser] = useState<User | null>(null);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        // Seed data if it doesn't exist
+        try {
+            if (!localStorage.getItem('foundtastic-all-users')) {
+                const initialUsers = mockUsers.map(({ password, status, ...user }) => ({ ...user, status: status === 'inactive' ? 'suspended' : status })) as FullUser[];
+                localStorage.setItem('foundtastic-all-users', JSON.stringify(initialUsers));
+            }
+            if (!localStorage.getItem('foundtastic-auth-data')) {
+                const initialAuthData = mockUsers.map(u => ({ email: u.email, password: u.password }));
+                localStorage.setItem('foundtastic-auth-data', JSON.stringify(initialAuthData));
+            }
+        } catch (error) {
+            console.error("Failed to seed data to localStorage", error);
+        }
+
+
+        // Check for a logged-in user in localStorage on initial load
+        try {
+            const storedUser = localStorage.getItem('foundtastic-user');
+            if (storedUser) {
+                setUser(JSON.parse(storedUser));
+            }
+        } catch (error) {
+            console.error("Failed to parse user from localStorage", error);
+            localStorage.removeItem('foundtastic-user');
+        } finally {
+            setLoading(false);
+        }
+    }, []);
+
+    const login = async (email: string, pass: string): Promise<void> => {
+        return new Promise((resolve, reject) => {
+            setTimeout(() => {
+                const storedUsers = localStorage.getItem('foundtastic-all-users');
+                const users: FullUser[] = storedUsers ? JSON.parse(storedUsers) : [];
+                
+                const storedAuthData = localStorage.getItem('foundtastic-auth-data');
+                const authData: AuthData[] = storedAuthData ? JSON.parse(storedAuthData) : [];
+
+                const userAuth = authData.find(u => u.email.toLowerCase() === email.toLowerCase());
+
+                if (userAuth && userAuth.password === pass) {
+                    const userToLogin = users.find(u => u.email.toLowerCase() === email.toLowerCase());
+                    if (!userToLogin) {
+                        reject(new Error('User data not found.'));
+                        return;
+                    }
+
+                    if (userToLogin.status === 'suspended') {
+                        reject(new Error('This account has been suspended.'));
+                        return;
+                    }
+
+                    const userData = {
+                        id: userToLogin.id,
+                        name: userToLogin.name,
+                        email: userToLogin.email,
+                        role: userToLogin.role as UserRole,
+                        memberSince: userToLogin.memberSince,
+                    };
+                    localStorage.setItem('foundtastic-user', JSON.stringify(userData));
+                    setUser(userData);
+                    resolve();
+                } else {
+                    reject(new Error('Invalid email or password'));
+                }
+            }, 1000); // Simulate network delay
+        });
+    };
+
+    const register = async (name: string, email: string, pass: string): Promise<void> => {
+         return new Promise((resolve, reject) => {
+            setTimeout(() => {
+                const storedUsers = localStorage.getItem('foundtastic-all-users');
+                const users: FullUser[] = storedUsers ? JSON.parse(storedUsers) : [];
+                
+                const storedAuthData = localStorage.getItem('foundtastic-auth-data');
+                const authData: AuthData[] = storedAuthData ? JSON.parse(storedAuthData) : [];
+                
+                if (users.find(u => u.email.toLowerCase() === email.toLowerCase())) {
+                    reject(new Error('An account with this email already exists.'));
+                    return;
+                }
+                
+                const newUser: FullUser = {
+                    id: `u${Date.now()}`,
+                    name,
+                    email,
+                    role: 'user',
+                    memberSince: new Date().toISOString().split('T')[0],
+                    status: 'active',
+                };
+                
+                const newAuthData: AuthData = { email, password: pass };
+                
+                localStorage.setItem('foundtastic-all-users', JSON.stringify([...users, newUser]));
+                localStorage.setItem('foundtastic-auth-data', JSON.stringify([...authData, newAuthData]));
+                
+                // After registering, log the user in
+                login(email, pass).then(resolve).catch(reject);
+            }, 1500); // Simulate network delay
+        });
+    };
+
+
+    const logout = () => {
+        localStorage.removeItem('foundtastic-user');
+        setUser(null);
+    };
+
+    return (
+        <AuthContext.Provider value={{ user, login, register, logout, loading }}>
+            {!loading && children}
+        </AuthContext.Provider>
+    );
+};
+
+export const useAuth = (): AuthContextType => {
+    const context = useContext(AuthContext);
+    if (context === undefined) {
+        throw new Error('useAuth must be used within an AuthProvider');
+    }
+    return context;
+};
