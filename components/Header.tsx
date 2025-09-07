@@ -1,8 +1,8 @@
-
 import React, { useState } from 'react';
 import { Link, NavLink } from 'react-router-dom';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useAuth } from '../contexts/AuthContext';
+import NotificationBell from './NotificationBell';
 
 const Header: React.FC = () => {
   const { language, setLanguage, t } = useLanguage();
@@ -82,6 +82,7 @@ const Header: React.FC = () => {
           </div>
           {user ? (
             <>
+              <NotificationBell />
               {dashboardLink && <NavLink to={dashboardLink.path} className={navLinkClass}>{dashboardLink.name}</NavLink>}
               <button onClick={logout} className="text-sm font-semibold leading-6 text-slate-700 hover:text-brand-primary">
                 {t.navLogout}

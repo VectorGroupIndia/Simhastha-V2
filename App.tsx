@@ -1,9 +1,9 @@
-
 import React, { useState, useEffect } from 'react';
 import { HashRouter as Router, Routes, Route, useLocation } from 'react-router-dom';
 
 import { AuthProvider } from './contexts/AuthContext';
 import { LanguageProvider } from './contexts/LanguageContext';
+import { NotificationProvider } from './contexts/NotificationContext';
 
 import Header from './components/Header';
 import Footer from './components/Footer';
@@ -87,9 +87,11 @@ const App: React.FC = () => {
   return (
     <AuthProvider>
         <LanguageProvider>
-            <Router>
-                <AppContent />
-            </Router>
+            <NotificationProvider>
+                <Router>
+                    <AppContent />
+                </Router>
+            </NotificationProvider>
         </LanguageProvider>
     </AuthProvider>
   );

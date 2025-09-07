@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useAuth } from '../contexts/AuthContext';
+import { useNotification } from '../contexts/NotificationContext';
 
 import AuthStep from '../components/reporting/AuthStep';
 import InstructionsStep from '../components/reporting/InstructionsStep';
@@ -37,6 +38,7 @@ const ReportFlowPage: React.FC = () => {
     const { user } = useAuth();
     const navigate = useNavigate();
     const { t } = useLanguage();
+    const { addNotification } = useNotification();
 
     const [step, setStep] = useState<Step>(user ? 'instructions' : 'auth');
     const [reportData, setReportData] = useState<ReportData>({
@@ -136,6 +138,20 @@ const ReportFlowPage: React.FC = () => {
             // 6. Add the new report to the list and save back to localStorage
             const updatedReports = [...allReports, newReport];
             localStorage.setItem('foundtastic-all-reports', JSON.stringify(updatedReports));
+            
+            // 7. Add notifications
+            addNotification({
+                title: t.notificationReportFiledTitle,
+                message: t.notificationReportFiledBody.replace('{itemName}', newReport.item),
+                link: '/profile'
+            });
+            if (newReport.matches.length > 0) {
+                addNotification({
+                    title: t.notificationMatchFoundTitle,
+                    message: t.notificationMatchFoundBody.replace('{itemName}', newReport.item),
+                    link: '/profile'
+                });
+            }
 
         } catch (error) {
             console.error("Failed during report submission and matching process:", error);
