@@ -2,11 +2,19 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import Sidebar from './components/Sidebar';
 import { useLanguage } from '../../contexts/LanguageContext';
-import { Report, ReportStatus, statusStyles } from '../ProfilePage';
+import { Report, ReportStatus } from '../ProfilePage';
 import DashboardHeader from '../../components/DashboardHeader';
 
+// Styles for the status dropdown, providing better visual feedback.
+const selectStatusStyles: { [key in ReportStatus]: string } = {
+    pending: 'bg-yellow-100 text-yellow-800',
+    in_review: 'bg-blue-100 text-blue-800',
+    resolved: 'bg-green-100 text-green-800',
+    closed: 'bg-gray-100 text-gray-800',
+};
+
 const ReportManagement: React.FC = () => {
-    const { t, translateStatus } = useLanguage();
+    const { t } = useLanguage();
     const [reports, setReports] = useState<Report[]>([]);
     const [searchTerm, setSearchTerm] = useState('');
     const [statusFilter, setStatusFilter] = useState<ReportStatus | 'all'>('all');
@@ -141,38 +149,53 @@ const ReportManagement: React.FC = () => {
                                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{t.adminReportsTableHeadMatches}</th>
                                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{t.adminReportsTableHeadStatus}</th>
                                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{t.adminReportsTableHeadDate}</th>
+                                    {/* FIX: Corrected the invalid translation key `t.adminReports` to `t.adminReportsTableHeadActions` */}
                                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{t.adminReportsTableHeadActions}</th>
                                 </tr>
                             </thead>
                             <tbody className="bg-white divide-y divide-gray-200">
                                 {filteredReports.map((report) => (
                                     <tr key={report.id}>
-                                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{report.item}</td>
-                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                            <span className={`font-semibold ${report.type === 'lost' ? 'text-red-600' : 'text-green-600'}`}>
+                                        <td className="px-6 py-4 whitespace-nowrap">
+                                            <div className="flex items-center">
+                                                <div className="flex-shrink-0 h-10 w-10">
+                                                    <img className="h-10 w-10 rounded-md object-cover" src={report.imageUrl} alt={report.item} />
+                                                </div>
+                                                <div className="ml-4">
+                                                    <div className="text-sm font-medium text-gray-900">{report.item}</div>
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td className="px-6 py-4 whitespace-nowrap">
+                                            <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${report.type === 'lost' ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800'}`}>
                                                 {report.type === 'lost' ? t.adminReportTypeLost : t.adminReportTypeFound}
                                             </span>
                                         </td>
-                                        <td className="px-6 py-4 whitespace-nowrap text-sm font-bold text-center text-brand-dark">
+                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-center text-gray-500">
                                             {report.matches?.length || 0}
                                         </td>
-                                        <td className="px-6 py-4 whitespace-nowrap text-sm">
-                                            <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${statusStyles[report.status]}`}>
-                                                {translateStatus(report.status)}
-                                            </span>
+                                        <td className="px-6 py-4 whitespace-nowrap">
+                                            <div className="relative inline-block text-left">
+                                                <select
+                                                    value={report.status}
+                                                    onChange={(e) => handleStatusChange(report.id, e.target.value as ReportStatus)}
+                                                    className={`appearance-none w-full px-3 pr-8 py-1 text-xs leading-5 font-semibold rounded-full border-0 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand-primary cursor-pointer ${selectStatusStyles[report.status]}`}
+                                                >
+                                                    <option value="pending" className="font-medium text-black bg-white">{t.status.pending}</option>
+                                                    <option value="in_review" className="font-medium text-black bg-white">{t.status.in_review}</option>
+                                                    <option value="resolved" className="font-medium text-black bg-white">{t.status.resolved}</option>
+                                                    <option value="closed" className="font-medium text-black bg-white">{t.status.closed}</option>
+                                                </select>
+                                                <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-inherit">
+                                                    <svg className="h-4 w-4" fill="currentColor" viewBox="0 0 20 20">
+                                                        <path fillRule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 11.168l3.71-3.938a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z" clipRule="evenodd" />
+                                                    </svg>
+                                                </div>
+                                            </div>
                                         </td>
                                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{report.date}</td>
                                         <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                                            <select 
-                                                value={report.status} 
-                                                onChange={(e) => handleStatusChange(report.id, e.target.value as ReportStatus)}
-                                                className="text-indigo-600 hover:text-indigo-900 bg-transparent border-none"
-                                            >
-                                                <option value="pending">{t.status.pending}</option>
-                                                <option value="in_review">{t.status.in_review}</option>
-                                                <option value="resolved">{t.status.resolved}</option>
-                                                <option value="closed">{t.status.closed}</option>
-                                            </select>
+                                            <button className="text-indigo-600 hover:text-indigo-900">{t.adminActionView}</button>
                                         </td>
                                     </tr>
                                 ))}
