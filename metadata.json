@@ -1,5 +1,7 @@
 {
   "name": "Copy of Foundtastic - Lost and Found Platform",
   "description": "A comprehensive digital ecosystem for managing lost and found items or people, connecting citizens, authorities, and volunteers, with a special focus on large events like Ujjain Simhastha Mahakumbh 2028.",
-  "requestFramePermissions": []
+  "requestFramePermissions": [
+    "camera"
+  ]
 }

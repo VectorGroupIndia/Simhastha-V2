@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { mockUsers } from '../../data/mockData';
+import Spinner from '../Spinner';
 
 // SVG Icons for form fields
 const MailIcon: React.FC = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg>;
@@ -9,7 +10,6 @@ const LockIcon: React.FC = () => <svg xmlns="http://www.w3.org/2000/svg" classNa
 const UserIcon: React.FC = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>;
 const EyeIcon: React.FC = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>;
 const EyeOffIcon: React.FC = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.542-7 1.274-4.057 5.064-7 9.542-7 .847 0 1.673.123 2.458.35M18.825 13.875A10.05 10.05 0 0119 12c-1.274-4.057-5.064-7-9.542-7a10.05 10.05 0 00-1.825.207M12 15a3 3 0 01-3-3m0 0l-6-6m12 12l-6-6" /></svg>;
-const SpinnerIcon: React.FC = () => <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>;
 
 const getPasswordStrength = (password: string) => {
     let score = 0;
@@ -100,7 +100,7 @@ const LoginForm: React.FC<AuthStepProps> = ({ onLoginSuccess }) => {
             {error && (<p className="text-sm text-red-600 text-center">{error}</p>)}
             <div>
                 <button type="submit" disabled={loading} className="flex w-full justify-center items-center rounded-md bg-brand-primary px-3 py-2.5 text-sm font-semibold leading-6 text-white shadow-sm hover:opacity-90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-primary disabled:bg-brand-primary/60 disabled:cursor-not-allowed">
-                    {loading ? <><SpinnerIcon /> {t.signingIn}</> : t.loginButton}
+                    {loading ? <><Spinner className="mr-3" /> {t.signingIn}</> : t.loginButton}
                 </button>
             </div>
         </form>
@@ -205,7 +205,7 @@ const RegisterForm: React.FC<AuthStepProps> = ({ onLoginSuccess }) => {
             {errors.form && (<p className="text-sm text-red-600 text-center py-2">{errors.form}</p>)}
             <div>
                 <button type="submit" disabled={loading} className="flex w-full justify-center items-center rounded-md bg-brand-secondary px-3 py-2.5 text-sm font-semibold leading-6 text-white shadow-sm hover:opacity-90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-secondary disabled:bg-brand-secondary/60 disabled:cursor-not-allowed">
-                     {loading ? <><SpinnerIcon /> {t.registering}</> : t.authRegisterButton}
+                     {loading ? <><Spinner className="mr-3" /> {t.registering}</> : t.authRegisterButton}
                 </button>
             </div>
         </form>

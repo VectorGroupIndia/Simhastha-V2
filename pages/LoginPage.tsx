@@ -3,6 +3,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useLanguage } from '../contexts/LanguageContext';
 import { mockUsers } from '../data/mockData';
+import Spinner from '../components/Spinner';
 
 const ClipboardIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
     <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
@@ -194,9 +195,16 @@ const LoginPage: React.FC = () => {
                             <button
                                 type="submit"
                                 disabled={loading}
-                                className="flex w-full justify-center rounded-md bg-brand-secondary px-3 py-2 text-sm font-semibold leading-6 text-white shadow-sm hover:opacity-90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-secondary disabled:opacity-50"
+                                className="flex w-full justify-center items-center rounded-md bg-brand-secondary px-3 py-2 text-sm font-semibold leading-6 text-white shadow-sm hover:opacity-90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-secondary disabled:opacity-50"
                             >
-                                {loading ? t.signingIn : t.loginButton}
+                                {loading ? (
+                                    <>
+                                        <Spinner size="sm" className="mr-3" />
+                                        {t.signingIn}
+                                    </>
+                                ) : (
+                                    t.loginButton
+                                )}
                             </button>
                         </div>
                     </form>
@@ -212,10 +220,10 @@ const LoginPage: React.FC = () => {
                         </div>
 
                         <div className="mt-6 grid grid-cols-2 gap-4">
-                            <button onClick={() => handleQuickLogin('user')} disabled={loading} className="flex w-full items-center justify-center gap-3 rounded-md bg-blue-500 px-3 py-2 text-white text-sm font-semibold focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-500 hover:bg-blue-600 disabled:opacity-50">{t.quickLoginCitizen}</button>
-                            <button onClick={() => handleQuickLogin('admin')} disabled={loading} className="flex w-full items-center justify-center gap-3 rounded-md bg-red-500 px-3 py-2 text-white text-sm font-semibold focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-500 hover:bg-red-600 disabled:opacity-50">{t.quickLoginAdmin}</button>
-                            <button onClick={() => handleQuickLogin('authority')} disabled={loading} className="flex w-full items-center justify-center gap-3 rounded-md bg-purple-500 px-3 py-2 text-white text-sm font-semibold focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-purple-500 hover:bg-purple-600 disabled:opacity-50">{t.quickLoginAuthority}</button>
-                            <button onClick={() => handleQuickLogin('volunteer')} disabled={loading} className="flex w-full items-center justify-center gap-3 rounded-md bg-green-500 px-3 py-2 text-white text-sm font-semibold focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-green-500 hover:bg-green-600 disabled:opacity-50">{t.quickLoginVolunteer}</button>
+                            <button onClick={() => handleQuickLogin('user')} disabled={loading} className="flex w-full items-center justify-center gap-3 rounded-md bg-blue-500 px-3 py-2 text-white text-sm font-semibold focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-500 hover:bg-blue-600 disabled:opacity-50">{loading ? <Spinner size="sm" /> : t.quickLoginCitizen}</button>
+                            <button onClick={() => handleQuickLogin('admin')} disabled={loading} className="flex w-full items-center justify-center gap-3 rounded-md bg-red-500 px-3 py-2 text-white text-sm font-semibold focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-500 hover:bg-red-600 disabled:opacity-50">{loading ? <Spinner size="sm" /> : t.quickLoginAdmin}</button>
+                            <button onClick={() => handleQuickLogin('authority')} disabled={loading} className="flex w-full items-center justify-center gap-3 rounded-md bg-purple-500 px-3 py-2 text-white text-sm font-semibold focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-purple-500 hover:bg-purple-600 disabled:opacity-50">{loading ? <Spinner size="sm" /> : t.quickLoginAuthority}</button>
+                            <button onClick={() => handleQuickLogin('volunteer')} disabled={loading} className="flex w-full items-center justify-center gap-3 rounded-md bg-green-500 px-3 py-2 text-white text-sm font-semibold focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-green-500 hover:bg-green-600 disabled:opacity-50">{loading ? <Spinner size="sm" /> : t.quickLoginVolunteer}</button>
                         </div>
                     </div>
                 </div>

@@ -7,6 +7,7 @@ import PieChart from '../../components/charts/PieChart';
 import BarChart from '../../components/charts/BarChart';
 import ConfirmationModal from '../../components/ConfirmationModal';
 import { SosRequest } from '../volunteer/VolunteerDashboard';
+import AuthoritySidebar from './components/AuthoritySidebar';
 
 // Icons
 const SosIcon = (props: React.SVGProps<SVGSVGElement>) => <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="2" stroke="currentColor" {...props}><path strokeLinecap="round" strokeLinejoin="round" d="M18.364 5.636a9 9 0 010 12.728M11.636 8.364a5 5 0 010 7.072M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>;
@@ -195,8 +196,9 @@ const AuthorityDashboard: React.FC = () => {
     };
     
     return (
-        <div className="bg-gray-50 min-h-screen">
-            <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-12">
+        <div className="flex min-h-screen bg-gray-50">
+            <AuthoritySidebar />
+            <main className="flex-1 p-8">
                 <DashboardHeader title={t.authorityDashboardTitle} />
                 
                  <div className="mb-8 bg-white p-6 rounded-lg shadow-md">
@@ -319,7 +321,7 @@ const AuthorityDashboard: React.FC = () => {
                         </div>
                     </div>
                 </div>
-            </div>
+            </main>
 
             {/* Resolve SOS Confirmation Modal */}
             <ConfirmationModal

@@ -1,19 +1,21 @@
-
 import React, { createContext, useState, useContext, ReactNode, useEffect } from 'react';
-import { mockUsers } from '../data/mockData';
+import { mockUsers, mockGroups } from '../data/mockData';
 
 type UserRole = 'user' | 'admin' | 'authority' | 'volunteer';
 type UserStatus = 'active' | 'suspended';
 
-interface User {
+export interface User {
   id: string;
   name: string;
   email: string;
   role: UserRole;
   memberSince: string;
+  avatarUrl: string;
+  groupIds: string[];
+  activeGroupId: string | null;
 }
 
-interface FullUser extends User {
+export interface FullUser extends User {
     status: UserStatus;
 }
 
@@ -28,6 +30,8 @@ interface AuthContextType {
   login: (email: string, pass: string) => Promise<void>;
   register: (name: string, email: string, pass: string) => Promise<void>;
   logout: () => void;
+  switchActiveGroup: (groupId: string) => void;
+  updateUserData: (updatedData: Partial<User>) => void;
   loading: boolean;
 }
 
@@ -41,12 +45,15 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         // Seed data if it doesn't exist
         try {
             if (!localStorage.getItem('foundtastic-all-users')) {
-                const initialUsers = mockUsers.map(({ password, status, ...user }) => ({ ...user, status: status === 'inactive' ? 'suspended' : status })) as FullUser[];
+                const initialUsers = mockUsers.map(({ password, ...user }) => user) as FullUser[];
                 localStorage.setItem('foundtastic-all-users', JSON.stringify(initialUsers));
             }
             if (!localStorage.getItem('foundtastic-auth-data')) {
                 const initialAuthData = mockUsers.map(u => ({ email: u.email, password: u.password }));
                 localStorage.setItem('foundtastic-auth-data', JSON.stringify(initialAuthData));
+            }
+            if (!localStorage.getItem('foundtastic-all-groups')) {
+                localStorage.setItem('foundtastic-all-groups', JSON.stringify(mockGroups));
             }
         } catch (error) {
             console.error("Failed to seed data to localStorage", error);
@@ -90,13 +97,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                         return;
                     }
 
-                    const userData = {
-                        id: userToLogin.id,
-                        name: userToLogin.name,
-                        email: userToLogin.email,
-                        role: userToLogin.role as UserRole,
-                        memberSince: userToLogin.memberSince,
-                    };
+                    const { status, ...userData } = userToLogin;
                     localStorage.setItem('foundtastic-user', JSON.stringify(userData));
                     setUser(userData);
                     resolve();
@@ -128,6 +129,9 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                     role: 'user',
                     memberSince: new Date().toISOString().split('T')[0],
                     status: 'active',
+                    avatarUrl: `https://i.pravatar.cc/150?u=${email}`,
+                    groupIds: [],
+                    activeGroupId: null,
                 };
                 
                 const newAuthData: AuthData = { email, password: pass };
@@ -140,6 +144,20 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             }, 1500); // Simulate network delay
         });
     };
+    
+    const updateUserData = (updatedData: Partial<User>) => {
+        if (user) {
+            const updatedUser = { ...user, ...updatedData };
+            setUser(updatedUser);
+            localStorage.setItem('foundtastic-user', JSON.stringify(updatedUser));
+        }
+    };
+
+    const switchActiveGroup = (groupId: string) => {
+        if (user && user.groupIds.includes(groupId)) {
+            updateUserData({ activeGroupId: groupId });
+        }
+    };
 
 
     const logout = () => {
@@ -148,7 +166,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     };
 
     return (
-        <AuthContext.Provider value={{ user, login, register, logout, loading }}>
+        <AuthContext.Provider value={{ user, login, register, logout, switchActiveGroup, updateUserData, loading }}>
             {!loading && children}
         </AuthContext.Provider>
     );

@@ -61,6 +61,9 @@ const Header: React.FC = () => {
           <NavLink to="/about" className={navLinkClass}>{t.navAbout}</NavLink>
           <NavLink to="/contact" className={navLinkClass}>{t.navContact}</NavLink>
           <NavLink to="/report" className={navLinkClass}>{t.navReport}</NavLink>
+          {user && user.role === 'user' && (
+              <NavLink to="/my-group" className={navLinkClass}>{t.navMyGroup}</NavLink>
+          )}
         </div>
         <div className="hidden lg:flex lg:flex-1 lg:justify-end items-center gap-x-6">
           <div className="relative">
@@ -121,6 +124,9 @@ const Header: React.FC = () => {
                 <NavLink to="/about" onClick={() => setIsMenuOpen(false)} className="-mx-3 block rounded-lg px-3 py-2 text-base font-semibold leading-7 text-slate-900 hover:bg-slate-50">{t.navAbout}</NavLink>
                 <NavLink to="/contact" onClick={() => setIsMenuOpen(false)} className="-mx-3 block rounded-lg px-3 py-2 text-base font-semibold leading-7 text-slate-900 hover:bg-slate-50">{t.navContact}</NavLink>
                 <NavLink to="/report" onClick={() => setIsMenuOpen(false)} className="-mx-3 block rounded-lg px-3 py-2 text-base font-semibold leading-7 text-slate-900 hover:bg-slate-50">{t.navReport}</NavLink>
+                {user && user.role === 'user' && (
+                    <NavLink to="/my-group" onClick={() => setIsMenuOpen(false)} className="-mx-3 block rounded-lg px-3 py-2 text-base font-semibold leading-7 text-slate-900 hover:bg-slate-50">{t.navMyGroup}</NavLink>
+                )}
               </div>
               <div className="py-6">
                 {user ? (

@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { useAuth } from '../../contexts/AuthContext';
@@ -6,6 +5,7 @@ import { mockReports, mockAnnouncements, mockVolunteerTasks, mockSosRequests } f
 import DashboardHeader from '../../components/DashboardHeader';
 import ConfirmationModal from '../../components/ConfirmationModal';
 import { Link } from 'react-router-dom';
+import { Report } from '../ProfilePage';
 
 interface Announcement {
     id: string;
@@ -15,24 +15,30 @@ interface Announcement {
 
 export interface SosRequest {
     id: string;
-    userName: string;
-    message: string;
-    details: string;
+    type: 'emergency' | 'sighting';
+    userName: string; // Name of person who triggered SOS or "Confirmed by Authority"
+    message: string; // "Emergency assistance..." or "Sighting of [Person]"
+    details: string; // Emergency details or link to report
     location: {
-        name: string;
+        name: string; // Camera location or user's last known location
         lat: number;
         lng: number;
     };
     timestamp: string;
-    contact: string;
+    contact: string; // contact number or "N/A"
     status: 'new' | 'acknowledged' | 'resolved';
     acknowledgedBy?: string;
+    sightingData?: {
+        report: Report;
+        snapshotUrl: string;
+    }
 }
 
 
 // Icons
 const ReportIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>;
 const SosIcon = (props: React.SVGProps<SVGSVGElement>) => <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="2" stroke="currentColor" {...props}><path strokeLinecap="round" strokeLinejoin="round" d="M18.364 5.636a9 9 0 010 12.728M11.636 8.364a5 5 0 010 7.072M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>;
+const SightingIcon = (props: React.SVGProps<SVGSVGElement>) => <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" {...props}><path strokeLinecap="round" strokeLinejoin="round" d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.432 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z" /><path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>;
 const MapPinIcon = (props: React.SVGProps<SVGSVGElement>) => <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor" {...props}><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" /></svg>;
 const PhoneIcon = (props: React.SVGProps<SVGSVGElement>) => <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" {...props}><path strokeLinecap="round" strokeLinejoin="round" d="M2.25 6.75c0 8.284 6.716 15 15 15h2.25a2.25 2.25 0 002.25-2.25v-1.372c0-.516-.351-.966-.852-1.091l-4.423-1.106c-.44-.11-.902.055-1.173.417l-.97 1.293c-.282.376-.769.542-1.21.38a12.035 12.035 0 01-7.143-7.143c-.162-.441.004-.928.38-1.21l1.293-.97c.363-.271.527-.734.417-1.173L6.963 3.102a1.125 1.125 0 00-1.091-.852H4.5A2.25 2.25 0 002.25 6.75z" /></svg>;
 const InfoIcon = (props: React.SVGProps<SVGSVGElement>) => <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" {...props}><path strokeLinecap="round" strokeLinejoin="round" d="M11.25 11.25l.041-.02a.75.75 0 011.063.852l-.708 2.836a.75.75 0 001.063.853l.041-.021M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9-3.75h.008v.008H12V8.25z" /></svg>;
@@ -61,6 +67,34 @@ const convertCoordsToPosition = (lat: number, lng: number) => {
         left: `${Math.max(0, Math.min(100, left))}%`,
     };
 };
+
+const getMarkerClasses = (status: 'new' | 'acknowledged' | 'resolved', type: 'emergency' | 'sighting') => {
+    const baseColor = type === 'emergency' ? 'red' : 'blue';
+    const acknowledgedColor = 'yellow';
+
+    switch (status) {
+        case 'new':
+            return {
+                ping: `animate-ping bg-${baseColor}-400`,
+                dot: `bg-${baseColor}-600`
+            };
+        case 'acknowledged':
+            return {
+                ping: `animate-ping bg-${acknowledgedColor}-400`,
+                dot: `bg-${acknowledgedColor}-500`
+            };
+        case 'resolved':
+            return {
+                ping: '', // No ping for resolved
+                dot: 'bg-green-600'
+            };
+        default:
+             return {
+                ping: '',
+                dot: 'bg-gray-500'
+            };
+    }
+}
 
 const SosMapView: React.FC<{ 
     requests: SosRequest[];
@@ -94,6 +128,7 @@ const SosMapView: React.FC<{
                 
                 {requests.map(req => {
                     const { top, left } = convertCoordsToPosition(req.location.lat, req.location.lng);
+                    const { ping, dot } = getMarkerClasses(req.status, req.type);
                     return (
                         <button
                             key={req.id}
@@ -103,8 +138,8 @@ const SosMapView: React.FC<{
                             aria-label={`SOS from ${req.userName}`}
                         >
                             <span className="relative flex h-4 w-4">
-                                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
-                                <span className="relative inline-flex rounded-full h-4 w-4 bg-red-600 border-2 border-white"></span>
+                                {ping && <span className={`absolute inline-flex h-full w-full rounded-full opacity-75 ${ping}`}></span>}
+                                <span className={`relative inline-flex rounded-full h-4 w-4 border-2 border-white ${dot}`}></span>
                             </span>
                         </button>
                     );
@@ -198,6 +233,7 @@ const VolunteerDashboard: React.FC = () => {
 
         const newSos: SosRequest = {
             id: `sos-${Date.now()}`,
+            type: 'emergency',
             userName: user.name,
             message: 'Emergency assistance required!',
             details: sosMessage || 'No additional details provided.',
@@ -293,37 +329,48 @@ const VolunteerDashboard: React.FC = () => {
                             </button>
                         </div>
                         
-                        {/* SOS Alerts */}
+                        {/* SOS & Sighting Alerts */}
                         <div className="bg-white p-6 rounded-lg shadow-md">
                             <h2 className="text-xl font-bold text-gray-800 mb-4 flex items-center">
-                                <SosIcon className="h-6 w-6 text-red-500 mr-3" />
+                                <SosIcon className="h-6 w-6 text-brand-primary mr-3" />
                                 {t.volunteerSosAlerts}
                             </h2>
                             <div className="space-y-4">
-                                {sosRequests.length > 0 ? sosRequests.map(req => (
-                                    <div key={req.id} className="p-4 bg-red-50 border-l-4 border-red-500 rounded-r-lg">
-                                        <div className="flex justify-between items-start">
-                                            <div>
-                                                <p className="font-bold text-red-900">{req.userName}</p>
-                                                <p className="text-sm text-red-800 mt-1">{req.message}</p>
+                                {sosRequests.length > 0 ? sosRequests.map(req => {
+                                    const isSighting = req.type === 'sighting';
+                                    const color = isSighting ? 'blue' : 'red';
+                                    const icon = isSighting ? <SightingIcon className={`h-5 w-5 text-${color}-600`} /> : <SosIcon className={`h-5 w-5 text-${color}-600`} />;
+
+                                    return (
+                                        <div key={req.id} className={`p-4 bg-${color}-50 border-l-4 border-${color}-500 rounded-r-lg`}>
+                                            <div className="flex justify-between items-start">
+                                                <div className="flex items-center">
+                                                    {icon}
+                                                    <p className={`font-bold text-${color}-900 ml-2`}>{req.message}</p>
+                                                </div>
+                                                <span className={`text-xs text-${color}-700 font-semibold flex-shrink-0 ml-2`}>{req.timestamp}</span>
                                             </div>
-                                            <span className="text-xs text-red-700 font-semibold flex-shrink-0 ml-2">{req.timestamp}</span>
-                                        </div>
-                                        <div className="mt-3 flex flex-col sm:flex-row items-start sm:items-center justify-between">
-                                            <p className="text-xs text-red-700 flex items-center"><MapPinIcon/> {req.location.name}</p>
-                                            <div className="flex items-center space-x-2 mt-2 sm:mt-0">
-                                                <button onClick={() => setSelectedSos(req)} className="px-4 py-2 text-xs font-bold text-brand-primary border border-brand-primary rounded-md hover:bg-brand-light">{t.volunteerActionViewDetails}</button>
-                                                {req.status === 'new' ? (
-                                                     <button onClick={() => handleAcknowledgeClick(req)} className="px-4 py-2 text-xs font-bold text-white bg-brand-secondary rounded-md hover:opacity-90">Acknowledge</button>
-                                                ) : (
-                                                    <span className="px-4 py-2 text-xs font-semibold text-green-800 bg-green-100 rounded-md">Acknowledged by {req.acknowledgedBy}</span>
-                                                )}
+                                            <div className="mt-3 flex flex-col sm:flex-row items-start sm:items-center justify-between">
+                                                <p className={`text-xs text-${color}-700 flex items-center`}><MapPinIcon/> {req.location.name}</p>
+                                                <div className="flex items-center space-x-2 mt-2 sm:mt-0">
+                                                    <button onClick={() => setSelectedSos(req)} className="px-4 py-2 text-xs font-bold text-brand-primary border border-brand-primary rounded-md hover:bg-brand-light">{t.volunteerActionViewDetails}</button>
+                                                    {req.status === 'new' && 
+                                                        <button onClick={() => handleAcknowledgeClick(req)} className="px-4 py-2 text-xs font-bold text-white bg-brand-secondary rounded-md hover:opacity-90">{t.volunteerAcknowledge}</button>
+                                                    }
+                                                    {req.status === 'acknowledged' &&
+                                                        <span className="px-4 py-2 text-xs font-semibold text-yellow-800 bg-yellow-100 rounded-md">Acknowledged by {req.acknowledgedBy === user?.name ? 'You' : req.acknowledgedBy}</span>
+                                                    }
+                                                    {req.status === 'resolved' &&
+                                                        <span className="px-4 py-2 text-xs font-semibold text-green-800 bg-green-100 rounded-md">{t.authoritySosStatusResolved}</span>
+                                                    }
+                                                </div>
                                             </div>
                                         </div>
-                                    </div>
-                                )) : <p className="text-center text-gray-500 py-8">{t.volunteerNoSosAlerts}</p>}
+                                    );
+                                }) : <p className="text-center text-gray-500 py-8">{t.volunteerNoSosAlerts}</p>}
                             </div>
                         </div>
+
 
                         {/* Assigned Tasks */}
                         <div className="bg-white p-6 rounded-lg shadow-md">
@@ -398,64 +445,98 @@ const VolunteerDashboard: React.FC = () => {
                 isOpen={!!sosToAcknowledge}
                 onClose={() => setSosToAcknowledge(null)}
                 onConfirm={handleConfirmAcknowledge}
-                title="Acknowledge SOS Alert"
-                message={<p>Are you sure you want to respond to this alert for "<strong>{sosToAcknowledge?.message}</strong>"? This will notify others that you are handling it.</p>}
-                confirmText="Yes, I will respond"
+                title={t.volunteerAcknowledgeModalTitle}
+                message={<p>{t.volunteerAcknowledgeModalMessage.replace('{message}', sosToAcknowledge?.message || '')}</p>}
+                confirmText={t.volunteerAcknowledgeModalConfirm}
                 variant="warning"
             />
 
-            {/* SOS Details Modal */}
+            {/* Alert Details Modal */}
             {selectedSos && (
                  <div className="fixed inset-0 bg-black bg-opacity-60 backdrop-blur-sm flex items-center justify-center z-50 p-4" onClick={() => setSelectedSos(null)}>
-                    <div className="bg-white rounded-xl shadow-2xl max-w-2xl w-full transform transition-all" onClick={e => e.stopPropagation()}>
-                        <div className="p-6 relative">
+                    <div className="bg-white rounded-xl shadow-2xl max-w-3xl w-full transform transition-all" onClick={e => e.stopPropagation()}>
+                        <div className="p-6 relative max-h-[90vh] overflow-y-auto">
                             <button onClick={() => setSelectedSos(null)} className="absolute top-4 right-4 text-slate-400 hover:text-slate-800">
                                 <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
                             </button>
-                            <div className="flex items-center mb-4">
-                                <SosIcon className="h-8 w-8 text-red-500 mr-3" />
-                                <h2 className="text-2xl font-bold text-red-800">{t.volunteerSosDetailsTitle}</h2>
-                            </div>
-                            <div className="space-y-4">
-                                <div className="p-4 bg-slate-50 rounded-lg border">
-                                    <h3 className="font-semibold text-slate-800 flex items-center mb-2"><InfoIcon className="w-5 h-5 mr-2 text-brand-primary" />{t.volunteerSosEmergencyDetails}</h3>
-                                    <p className="text-slate-700">{selectedSos.details}</p>
+                           
+                            {selectedSos.type === 'sighting' ? (
+                                <>
+                                 <div className="flex items-center mb-4">
+                                    <SightingIcon className="h-8 w-8 text-blue-500 mr-3" />
+                                    <h2 className="text-2xl font-bold text-blue-800">{t.volunteerSightingDetailsTitle}</h2>
                                 </div>
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                     <div className="p-4 bg-slate-50 rounded-lg border">
-                                        <h3 className="font-semibold text-slate-800 mb-2">{t.volunteerSosContactPerson}</h3>
-                                        <p className="text-slate-900 font-medium">{selectedSos.userName}</p>
-                                        <p className="text-slate-600 text-sm mt-2">{t.volunteerSosContactNumber}</p>
-                                        <p className="text-slate-900 font-medium">{selectedSos.contact}</p>
-                                        <a href={`tel:${selectedSos.contact}`} className="mt-3 w-full inline-flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-green-600 hover:bg-green-700">
-                                            <PhoneIcon className="w-5 h-5 mr-2" />
-                                            {t.volunteerSosCallNow}
-                                        </a>
+                                        <h3 className="font-semibold text-slate-800 mb-2">{t.volunteerMissingPerson}</h3>
+                                        <div className="flex items-center gap-4">
+                                            <img src={selectedSos.sightingData?.report.imageUrl} alt={selectedSos.sightingData?.report.item} className="w-20 h-20 object-cover rounded-full border-2 border-white"/>
+                                            <div>
+                                                <p className="font-bold text-slate-900">{selectedSos.sightingData?.report.item}</p>
+                                                <p className="text-sm text-slate-600">{`Age: ${selectedSos.sightingData?.report.age}, ${selectedSos.sightingData?.report.gender}`}</p>
+                                            </div>
+                                        </div>
                                     </div>
                                     <div className="p-4 bg-slate-50 rounded-lg border">
+                                        <h3 className="font-semibold text-slate-800 mb-2">{t.volunteerSightingSnapshot}</h3>
+                                        <img src={selectedSos.sightingData?.snapshotUrl} alt="Sighting snapshot" className="w-full h-auto rounded-md border"/>
+                                    </div>
+                                    <div className="md:col-span-2 p-4 bg-slate-50 rounded-lg border">
                                         <h3 className="font-semibold text-slate-800 mb-2">{t.volunteerSosLocationMap}</h3>
                                         <p className="text-sm text-slate-600 mb-2">{selectedSos.location.name}</p>
-                                        <div className="h-40 rounded-md overflow-hidden border">
-                                            <iframe
-                                                width="100%"
-                                                height="100%"
-                                                style={{ border: 0 }}
-                                                loading="lazy"
-                                                allowFullScreen
-                                                referrerPolicy="no-referrer-when-downgrade"
+                                        <div className="h-48 rounded-md overflow-hidden border">
+                                            <iframe width="100%" height="100%" style={{ border: 0 }} loading="lazy" allowFullScreen referrerPolicy="no-referrer-when-downgrade"
                                                 src={`https://maps.google.com/maps?q=${selectedSos.location.lat},${selectedSos.location.lng}&z=15&output=embed`}>
                                             </iframe>
                                         </div>
                                     </div>
                                 </div>
-                            </div>
+                                </>
+                            ) : (
+                                <>
+                                 <div className="flex items-center mb-4">
+                                    <SosIcon className="h-8 w-8 text-red-500 mr-3" />
+                                    <h2 className="text-2xl font-bold text-red-800">{t.volunteerSosDetailsTitle}</h2>
+                                </div>
+                                <div className="space-y-4">
+                                    <div className="p-4 bg-slate-50 rounded-lg border">
+                                        <h3 className="font-semibold text-slate-800 flex items-center mb-2"><InfoIcon className="w-5 h-5 mr-2 text-brand-primary" />{t.volunteerSosEmergencyDetails}</h3>
+                                        <p className="text-slate-700">{selectedSos.details}</p>
+                                    </div>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        <div className="p-4 bg-slate-50 rounded-lg border">
+                                            <h3 className="font-semibold text-slate-800 mb-2">{t.volunteerSosContactPerson}</h3>
+                                            <p className="text-slate-900 font-medium">{selectedSos.userName}</p>
+                                            <p className="text-slate-600 text-sm mt-2">{t.volunteerSosContactNumber}</p>
+                                            <p className="text-slate-900 font-medium">{selectedSos.contact}</p>
+                                            <a href={`tel:${selectedSos.contact}`} className="mt-3 w-full inline-flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-green-600 hover:bg-green-700">
+                                                <PhoneIcon className="w-5 h-5 mr-2" />
+                                                {t.volunteerSosCallNow}
+                                            </a>
+                                        </div>
+                                        <div className="p-4 bg-slate-50 rounded-lg border">
+                                            <h3 className="font-semibold text-slate-800 mb-2">{t.volunteerSosLocationMap}</h3>
+                                            <p className="text-sm text-slate-600 mb-2">{selectedSos.location.name}</p>
+                                            <div className="h-40 rounded-md overflow-hidden border">
+                                                <iframe width="100%" height="100%" style={{ border: 0 }} loading="lazy" allowFullScreen referrerPolicy="no-referrer-when-downgrade"
+                                                    src={`https://maps.google.com/maps?q=${selectedSos.location.lat},${selectedSos.location.lng}&z=15&output=embed`}>
+                                                </iframe>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                </>
+                            )}
+
                              <div className="mt-6 flex justify-end items-center gap-x-4">
                                 <button onClick={() => setSelectedSos(null)} className="px-6 py-2 bg-slate-200 text-slate-800 font-semibold rounded-md hover:bg-slate-300">
                                     {t.modalClose}
                                 </button>
-                                <button className="px-6 py-2 bg-brand-secondary text-white font-semibold rounded-md hover:opacity-90">
-                                    {t.volunteerAcceptTask}
-                                </button>
+                                {selectedSos.status === 'new' && (
+                                    <button onClick={() => { handleAcknowledgeClick(selectedSos); setSelectedSos(null); }} className="px-6 py-2 bg-brand-secondary text-white font-semibold rounded-md hover:opacity-90">
+                                        {t.volunteerAcknowledge}
+                                    </button>
+                                )}
                             </div>
                         </div>
                     </div>

@@ -18,6 +18,7 @@ import FaqPage from './pages/FaqPage';
 import LoginPage from './pages/LoginPage';
 import ProfilePage from './pages/ProfilePage';
 import ReportFlowPage from './pages/ReportFlowPage';
+import MyGroupPage from './pages/MyGroupPage';
 
 // Admin Pages
 import AdminDashboard from './pages/admin/AdminDashboard';
@@ -29,6 +30,7 @@ import AnalyticsPage from './pages/admin/AnalyticsPage';
 
 // Authority Pages
 import AuthorityDashboard from './pages/authority/AuthorityDashboard';
+import CCTVMonitoringPage from './pages/authority/CCTVMonitoringPage';
 
 // Volunteer Pages
 import VolunteerDashboard from './pages/volunteer/VolunteerDashboard';
@@ -45,11 +47,11 @@ const AppContent: React.FC = () => {
         }
     }, []);
     
-    const isAdminRoute = location.pathname.startsWith('/admin');
+    const isAdminOrAuthorityRoute = location.pathname.startsWith('/admin') || location.pathname.startsWith('/authority');
 
     return (
         <div className="flex flex-col min-h-screen">
-            {!isAdminRoute && <Header />}
+            {!isAdminOrAuthorityRoute && <Header />}
             <main className="flex-grow">
                 <Routes>
                     <Route path="/" element={<HomePage />} />
@@ -60,6 +62,7 @@ const AppContent: React.FC = () => {
                     <Route path="/report" element={<ReportFlowPage />} />
                     
                     <Route path="/profile" element={<ProtectedRoute><ProfilePage /></ProtectedRoute>} />
+                    <Route path="/my-group" element={<ProtectedRoute role="user"><MyGroupPage /></ProtectedRoute>} />
 
                     {/* Admin Routes */}
                     <Route path="/admin" element={<ProtectedRoute role="admin"><AdminDashboard /></ProtectedRoute>} />
@@ -71,12 +74,13 @@ const AppContent: React.FC = () => {
 
                     {/* Authority Routes */}
                     <Route path="/authority" element={<ProtectedRoute role="authority"><AuthorityDashboard /></ProtectedRoute>} />
+                    <Route path="/authority/cctv-monitoring" element={<ProtectedRoute role="authority"><CCTVMonitoringPage /></ProtectedRoute>} />
 
                     {/* Volunteer Routes */}
                     <Route path="/volunteer" element={<ProtectedRoute role="volunteer"><VolunteerDashboard /></ProtectedRoute>} />
                 </Routes>
             </main>
-            {!isAdminRoute && <Footer />}
+            {!isAdminOrAuthorityRoute && <Footer />}
             {showLanguagePopup && <LanguageSelectorPopup onClose={() => setShowLanguagePopup(false)} />}
         </div>
     );

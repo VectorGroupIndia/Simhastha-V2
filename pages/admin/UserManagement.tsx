@@ -48,13 +48,17 @@ const UserManagement: React.FC = () => {
             if (storedUsers) {
                 setUsers(JSON.parse(storedUsers));
             } else {
-                const initialUsers = mockUsers.map(({ password, status, ...user }) => ({ ...user, status: status === 'inactive' ? 'suspended' : status })) as User[];
+                // FIX: The original code compared `status` to 'inactive', which is not a valid type and caused an error.
+                // This was corrected to simply use the existing status from mockUsers, which is already correctly typed.
+                const initialUsers = mockUsers.map(({ password, status, ...user }) => ({ ...user, status })) as User[];
                 localStorage.setItem('foundtastic-all-users', JSON.stringify(initialUsers));
                 setUsers(initialUsers);
             }
         } catch (error) {
             console.error("Failed to process users from localStorage", error);
-            const initialUsers = mockUsers.map(({ password, status, ...user }) => ({ ...user, status: status === 'inactive' ? 'suspended' : status })) as User[];
+            // FIX: The original code compared `status` to 'inactive', which is not a valid type and caused an error.
+            // This was corrected to simply use the existing status from mockUsers, which is already correctly typed.
+            const initialUsers = mockUsers.map(({ password, status, ...user }) => ({ ...user, status })) as User[];
             setUsers(initialUsers);
         }
     }, []);

@@ -100,6 +100,8 @@ const ReportFlowPage: React.FC = () => {
             // 2. Create the new report object
             const newReport: Report = {
                 id: `rep-${Date.now()}`,
+                // FIX: Added the missing 'reportCategory' property. This report flow is for items.
+                reportCategory: 'item',
                 type: reportData.reportType,
                 item: reportData.itemName,
                 description: reportData.description,

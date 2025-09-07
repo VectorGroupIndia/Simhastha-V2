@@ -1,7 +1,8 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Report, statusStyles } from '../pages/ProfilePage';
 import { useLanguage } from '../contexts/LanguageContext';
 import SuggestedMatches from './SuggestedMatches';
+import { Sighting } from '../pages/authority/CCTVMonitoringPage';
 
 declare const jspdf: any;
 
@@ -21,23 +22,43 @@ const CalendarIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
 
 const ReportDetailsModal: React.FC<ReportDetailsModalProps> = ({ report, onClose }) => {
     const { t, translateStatus } = useLanguage();
+    const [confirmedSightings, setConfirmedSightings] = useState<Sighting[]>([]);
     
+    useEffect(() => {
+        if (report.reportCategory === 'person') {
+            try {
+                const allSightingsStr = localStorage.getItem('foundtastic-sightings');
+                if (allSightingsStr) {
+                    const allSightings: Sighting[] = JSON.parse(allSightingsStr);
+                    const relevantSightings = allSightings.filter(
+                        s => s.reportId === report.id && s.status === 'confirmed'
+                    ).map(s => ({...s, timestamp: new Date(s.timestamp)}));
+                    setConfirmedSightings(relevantSightings);
+                }
+            } catch(e) {
+                console.error("Failed to load sightings for report", e);
+            }
+        }
+    }, [report]);
+
     const handleDownloadPdf = () => {
         const doc = new jspdf.jsPDF();
 
         doc.setFontSize(20);
         doc.text("Foundtastic - Report Summary", 14, 22);
         doc.setFontSize(12);
-        doc.text(`Report Type: ${report.type === 'lost' ? 'Lost Item' : 'Found Item'}`, 14, 32);
+        doc.text(`Report Type: ${report.type === 'lost' ? 'Lost Item/Person' : 'Found Item'}`, 14, 32);
         doc.text(`Report Date: ${report.date}`, 14, 38);
 
         const tableColumn = ["Detail", "Information"];
         const tableRows = [
-            ["Item Name", report.item],
+            ["Name", report.item],
             ["Status", report.status],
             ["Description", report.description],
             ["Last Known Location", report.location],
         ];
+        if (report.age) tableRows.push(["Age", report.age.toString()]);
+        if (report.gender) tableRows.push(["Gender", report.gender]);
         
         doc.autoTable({
             startY: 48,
@@ -106,13 +127,46 @@ const ReportDetailsModal: React.FC<ReportDetailsModalProps> = ({ report, onClose
                                 <h3 className="font-semibold text-slate-800">{t.modalDescription}</h3>
                                 <p className="text-slate-600 text-sm mt-2">{report.description}</p>
                             </div>
-
                         </div>
                     </div>
                     
-                    {report.matches && report.matches.length > 0 && (
+                    {report.matches && report.matches.length > 0 && report.reportCategory === 'item' && (
                         <div className="mt-8 border-t pt-6">
                             <SuggestedMatches matchIds={report.matches} currentReportId={report.id} />
+                        </div>
+                    )}
+                    
+                    {confirmedSightings.length > 0 && (
+                        <div className="mt-8 border-t pt-6">
+                            <h3 className="text-xl font-bold text-brand-secondary mb-4">{t.confirmedSightings}</h3>
+                             <div className="space-y-6">
+                                {confirmedSightings.map(sighting => (
+                                <div key={sighting.id} className="p-4 border rounded-lg bg-green-50">
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        <div>
+                                            <p className="font-semibold text-green-800">Sighting at {sighting.timestamp.toLocaleString()}</p>
+                                            <p className="text-sm text-green-700 mt-1"><strong>Location:</strong> {sighting.cameraLocation}</p>
+                                            <p className="text-sm text-green-700"><strong>Confidence:</strong> {(sighting.confidence * 100).toFixed(1)}%</p>
+                                            <div className="mt-3 h-40 rounded-md overflow-hidden border border-green-200">
+                                                 <iframe
+                                                    width="100%"
+                                                    height="100%"
+                                                    style={{ border: 0 }}
+                                                    loading="lazy"
+                                                    allowFullScreen
+                                                    referrerPolicy="no-referrer-when-downgrade"
+                                                    src={`https://maps.google.com/maps?q=${sighting.cameraLocation}, Ujjain&z=15&output=embed`}>
+                                                </iframe>
+                                            </div>
+                                        </div>
+                                        <div>
+                                            <p className="font-semibold text-green-800 mb-2">Snapshot</p>
+                                            <img src={sighting.snapshotUrl} alt="Sighting snapshot" className="w-full h-auto rounded-lg border-2 border-green-200" />
+                                        </div>
+                                    </div>
+                                </div>
+                                ))}
+                            </div>
                         </div>
                     )}
 

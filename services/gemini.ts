@@ -1,4 +1,5 @@
 
+
 import { GoogleGenAI, Type } from "@google/genai";
 import { ItemCategory } from "../types";
 import { CATEGORIES } from "../constants";
@@ -228,8 +229,6 @@ Analyze the reports, using both the text and the provided image of the source it
 
         const textPart = { text: promptText };
         
-        // FIX: The `parts` array was incorrectly typed as `never[]`.
-        // It's now explicitly typed to accept both text and image parts.
         const parts: ({ text: string } | { inlineData: { mimeType: string; data: string; } })[] = [];
 
         if (sourceReport.imageUrl && sourceReport.imageUrl.startsWith('data:')) {
@@ -280,3 +279,85 @@ Analyze the reports, using both the text and the provided image of the source it
 export const findMatchingReports = process.env.API_KEY
     ? findMatchingReportsLive
     : findMatchingReportsMock;
+
+
+// --- Face Recognition Logic ---
+
+interface FaceMatchResult {
+    match: boolean;
+    confidence?: number;
+}
+
+const findFaceInVideoFrameMock = async (
+  _personImageBase64: { mimeType: string, data: string },
+  _videoFrameBase64: { mimeType: string, data: string }
+): Promise<FaceMatchResult> => {
+  return new Promise(resolve => {
+    // Simulate API call delay
+    setTimeout(() => {
+      // In this mock, we'll randomly return a match about 5% of the time to test the UI flow.
+      const isMatch = Math.random() < 0.05; 
+      if (isMatch) {
+        console.log("Mock AI: Found a potential face match!");
+        resolve({ match: true, confidence: Math.random() * (0.98 - 0.85) + 0.85 });
+      } else {
+        resolve({ match: false });
+      }
+    }, 2500); // Slower delay to simulate a more complex task
+  });
+};
+
+
+const findFaceInVideoFrameLive = async (
+  personImageBase64: { mimeType: string, data: string },
+  videoFrameBase64: { mimeType: string, data: string }
+): Promise<FaceMatchResult> => {
+  try {
+    const personImagePart = {
+      inlineData: { ...personImageBase64 },
+    };
+    const videoFramePart = {
+      inlineData: { ...videoFrameBase64 },
+    };
+    
+    const textPart = {
+      text: "You are an advanced AI security assistant. Your task is to determine if the person in the first image (the reference photo) is present in the second image (the video frame). Analyze the faces carefully. Respond only with a JSON object indicating if a match is found and the confidence level if it is a match.",
+    };
+
+    const response = await ai.models.generateContent({
+      model: "gemini-2.5-flash",
+      contents: { parts: [textPart, personImagePart, videoFramePart] },
+      config: {
+        responseMimeType: "application/json",
+        responseSchema: {
+          type: Type.OBJECT,
+          properties: {
+            match: {
+              type: Type.BOOLEAN,
+              description: "Whether the person from the reference photo is found in the video frame."
+            },
+            confidence: {
+              type: Type.NUMBER,
+              description: "The confidence score of the match, from 0 to 1. Only include if match is true.",
+              nullable: true,
+            }
+          },
+          required: ["match"]
+        }
+      }
+    });
+
+    const jsonText = response.text.trim();
+    return JSON.parse(jsonText) as FaceMatchResult;
+
+  } catch (error) {
+    console.error("Error during face recognition with Gemini:", error);
+    // To prevent overwhelming the user with errors, we'll return 'no match' on API failure.
+    // In a real-world scenario, you might want more robust error handling.
+    return { match: false };
+  }
+};
+
+export const findFaceInVideoFrame = process.env.API_KEY
+    ? findFaceInVideoFrameLive
+    : findFaceInVideoFrameMock;

@@ -1,4 +1,5 @@
 
+
 import React, { useState, useEffect, useMemo } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useLanguage } from '../contexts/LanguageContext';
@@ -8,8 +9,10 @@ export type ReportStatus = 'pending' | 'in_review' | 'resolved' | 'closed';
 
 export interface Report {
     id: string;
+    reportCategory: 'item' | 'person';
     type: 'lost' | 'found';
-    item: string;
+    // Union for item name or person name
+    item: string; // Name of item or person
     description: string;
     date: string;
     status: ReportStatus;
@@ -17,6 +20,9 @@ export interface Report {
     imageUrl: string;
     matches?: string[];
     resolvedDate?: string;
+    // Optional fields for persons
+    age?: number;
+    gender?: 'Male' | 'Female' | 'Other';
 }
 
 export const statusStyles: { [key in ReportStatus]: string } = {
