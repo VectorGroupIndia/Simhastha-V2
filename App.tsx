@@ -47,12 +47,11 @@ const AppContent: React.FC = () => {
         }
     }, []);
     
-    const isDashboardRoute = location.pathname.startsWith('/admin') || location.pathname.startsWith('/authority') || location.pathname.startsWith('/volunteer');
     const isHomePage = location.pathname === '/';
 
     return (
-        <div className={`flex flex-col min-h-screen ${isHomePage ? 'bg-brand-bg' : ''}`}>
-            {!isDashboardRoute && <Header />}
+        <div className={`flex flex-col min-h-screen ${isHomePage ? 'bg-brand-bg' : 'bg-brand-glass-bg text-white'}`}>
+            <Header />
             <main className="flex-grow">
                 <Routes>
                     <Route path="/" element={<HomePage />} />
@@ -81,7 +80,7 @@ const AppContent: React.FC = () => {
                     <Route path="/volunteer" element={<ProtectedRoute role="volunteer"><VolunteerDashboard /></ProtectedRoute>} />
                 </Routes>
             </main>
-            {!isDashboardRoute && <Footer />}
+            <Footer />
             {showLanguagePopup && <LanguageSelectorPopup onClose={() => setShowLanguagePopup(false)} />}
         </div>
     );

@@ -26,11 +26,19 @@ export interface Report {
 }
 
 export const statusStyles: { [key in ReportStatus]: string } = {
-    pending: 'bg-yellow-100 text-yellow-800',
-    in_review: 'bg-blue-100 text-blue-800',
-    resolved: 'bg-green-100 text-green-800',
-    closed: 'bg-slate-100 text-slate-800',
+    pending: 'bg-yellow-400/20 text-yellow-300 border-yellow-400/30',
+    in_review: 'bg-blue-400/20 text-blue-300 border-blue-400/30',
+    resolved: 'bg-green-400/20 text-green-300 border-green-400/30',
+    closed: 'bg-slate-400/20 text-slate-300 border-slate-400/30',
 };
+
+const BackgroundBlobs: React.FC = () => (
+    <>
+      <div className="absolute -top-40 -left-40 w-96 h-96 bg-brand-primary/30 rounded-full filter blur-3xl opacity-50 animate-float"></div>
+      <div className="absolute -bottom-40 -right-40 w-96 h-96 bg-brand-secondary/30 rounded-full filter blur-3xl opacity-50 animate-float2"></div>
+    </>
+);
+
 
 const ProfilePage: React.FC = () => {
     const { user } = useAuth();
@@ -39,7 +47,6 @@ const ProfilePage: React.FC = () => {
     const [selectedReport, setSelectedReport] = useState<Report | null>(null);
     const [filter, setFilter] = useState<'all' | 'lost' | 'found'>('all');
 
-    // New states for advanced filtering and sorting
     const [sortOption, setSortOption] = useState<string>('date_desc');
     const [startDate, setStartDate] = useState('');
     const [endDate, setEndDate] = useState('');
@@ -50,8 +57,6 @@ const ProfilePage: React.FC = () => {
                 const allReportsStr = localStorage.getItem('foundtastic-all-reports');
                 if (allReportsStr) {
                     const allReports: Report[] = JSON.parse(allReportsStr);
-                    // This is a simplified check. In a real app, user ID would be on the report.
-                    // Here we'll just show some reports for demo.
                     setReports(allReports.slice(0, 6)); 
                 }
             } catch (e) {
@@ -62,10 +67,8 @@ const ProfilePage: React.FC = () => {
     
     const processedReports = useMemo(() => {
         let filtered = reports.filter(report => {
-            // Type filter
             const matchesType = filter === 'all' || report.type === filter;
 
-            // Date range filter
             const reportDate = new Date(report.date);
             const start = startDate ? new Date(startDate) : null;
             const end = endDate ? new Date(endDate) : null;
@@ -76,7 +79,6 @@ const ProfilePage: React.FC = () => {
             return matchesType && matchesDate;
         });
 
-        // Sorting logic
         const [sortKey, sortOrder] = sortOption.split('_');
         
         filtered.sort((a, b) => {
@@ -113,38 +115,36 @@ const ProfilePage: React.FC = () => {
     }
 
     return (
-        <div className="bg-slate-50">
-            <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-16">
+        <div className="relative isolate overflow-hidden min-h-screen py-16">
+            <BackgroundBlobs />
+            <div className="container mx-auto px-4 sm:px-6 lg:px-8 z-10">
                 <div className="max-w-4xl mx-auto">
-                    {/* User Profile Header */}
-                    <div className="bg-white rounded-lg shadow-md p-6 mb-8 flex items-center space-x-6">
-                        <div className="w-20 h-20 bg-brand-primary rounded-full flex items-center justify-center text-white text-3xl font-bold">
+                    <div className="bg-white/10 backdrop-blur-lg p-6 rounded-2xl border border-white/20 shadow-2xl mb-8 flex items-center space-x-6">
+                        <div className="w-20 h-20 bg-brand-primary/50 rounded-full flex items-center justify-center text-white text-3xl font-bold">
                             {user.name.charAt(0)}
                         </div>
                         <div>
-                            <h1 className="text-3xl font-bold text-brand-dark">{user.name}</h1>
-                            <p className="text-slate-600">{user.email}</p>
-                            <p className="text-slate-500 text-sm mt-1">{t.profileMemberSince} {user.memberSince}</p>
+                            <h1 className="text-3xl font-bold text-white">{user.name}</h1>
+                            <p className="text-slate-300">{user.email}</p>
+                            <p className="text-slate-400 text-sm mt-1">{t.profileMemberSince} {user.memberSince}</p>
                         </div>
                     </div>
 
-                    {/* Reports Section */}
-                    <div className="bg-white rounded-lg shadow-md p-6">
-                        <div className="flex flex-col sm:flex-row justify-between sm:items-center border-b pb-4 mb-4">
-                            <h2 className="text-2xl font-bold text-brand-dark">{t.profileMyReports}</h2>
+                    <div className="bg-white/10 backdrop-blur-lg p-6 rounded-2xl border border-white/20 shadow-2xl">
+                        <div className="flex flex-col sm:flex-row justify-between sm:items-center border-b border-white/20 pb-4 mb-4">
+                            <h2 className="text-2xl font-bold text-white">{t.profileMyReports}</h2>
                              <div className="mt-3 sm:mt-0 flex space-x-2">
-                                <button onClick={() => setFilter('all')} className={`px-4 py-2 text-sm font-medium rounded-md ${filter === 'all' ? 'bg-brand-primary text-white' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'}`}>{t.profileFilterAll}</button>
-                                <button onClick={() => setFilter('lost')} className={`px-4 py-2 text-sm font-medium rounded-md ${filter === 'lost' ? 'bg-brand-primary text-white' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'}`}>{t.profileFilterLost}</button>
-                                <button onClick={() => setFilter('found')} className={`px-4 py-2 text-sm font-medium rounded-md ${filter === 'found' ? 'bg-brand-primary text-white' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'}`}>{t.profileFilterFound}</button>
+                                <button onClick={() => setFilter('all')} className={`px-4 py-2 text-sm font-medium rounded-md transition-colors ${filter === 'all' ? 'bg-brand-primary text-white' : 'bg-black/20 text-slate-300 hover:bg-black/30'}`}>{t.profileFilterAll}</button>
+                                <button onClick={() => setFilter('lost')} className={`px-4 py-2 text-sm font-medium rounded-md transition-colors ${filter === 'lost' ? 'bg-brand-primary text-white' : 'bg-black/20 text-slate-300 hover:bg-black/30'}`}>{t.profileFilterLost}</button>
+                                <button onClick={() => setFilter('found')} className={`px-4 py-2 text-sm font-medium rounded-md transition-colors ${filter === 'found' ? 'bg-brand-primary text-white' : 'bg-black/20 text-slate-300 hover:bg-black/30'}`}>{t.profileFilterFound}</button>
                             </div>
                         </div>
 
-                        {/* Sort and Filter Controls */}
-                        <div className="p-4 bg-slate-50 rounded-lg border mb-6">
+                        <div className="p-4 bg-black/20 rounded-lg border border-white/10 mb-6">
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-end">
                                 <div>
-                                    <label htmlFor="sortOption" className="block text-sm font-medium text-slate-700">{t.profileSortBy}</label>
-                                    <select id="sortOption" value={sortOption} onChange={(e) => setSortOption(e.target.value)} className="mt-1 block w-full px-3 py-2 bg-white border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-brand-primary focus:border-brand-primary">
+                                    <label htmlFor="sortOption" className="block text-sm font-medium text-slate-300">{t.profileSortBy}</label>
+                                    <select id="sortOption" value={sortOption} onChange={(e) => setSortOption(e.target.value)} className="mt-1 block w-full px-3 py-2 bg-white/10 border border-white/20 rounded-md shadow-sm focus:outline-none focus:ring-brand-secondary focus:border-brand-secondary text-white">
                                         <option value="date_desc">{t.sortDateNewest}</option>
                                         <option value="date_asc">{t.sortDateOldest}</option>
                                         <option value="item_asc">{t.sortItemAZ}</option>
@@ -155,33 +155,33 @@ const ProfilePage: React.FC = () => {
                                 </div>
                                 <div className="grid grid-cols-2 gap-2">
                                     <div>
-                                        <label htmlFor="startDate" className="block text-sm font-medium text-slate-700">{t.dateFrom}</label>
-                                        <input type="date" id="startDate" value={startDate} onChange={(e) => setStartDate(e.target.value)} className="mt-1 block w-full px-3 py-2 bg-white border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-brand-primary focus:border-brand-primary"/>
+                                        <label htmlFor="startDate" className="block text-sm font-medium text-slate-300">{t.dateFrom}</label>
+                                        <input type="date" id="startDate" value={startDate} onChange={(e) => setStartDate(e.target.value)} className="mt-1 block w-full px-3 py-2 bg-white/10 border border-white/20 rounded-md shadow-sm focus:outline-none focus:ring-brand-secondary focus:border-brand-secondary text-slate-300"/>
                                     </div>
                                      <div>
-                                        <label htmlFor="endDate" className="block text-sm font-medium text-slate-700">{t.dateTo}</label>
-                                        <input type="date" id="endDate" value={endDate} onChange={(e) => setEndDate(e.target.value)} className="mt-1 block w-full px-3 py-2 bg-white border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-brand-primary focus:border-brand-primary"/>
+                                        <label htmlFor="endDate" className="block text-sm font-medium text-slate-300">{t.dateTo}</label>
+                                        <input type="date" id="endDate" value={endDate} onChange={(e) => setEndDate(e.target.value)} className="mt-1 block w-full px-3 py-2 bg-white/10 border border-white/20 rounded-md shadow-sm focus:outline-none focus:ring-brand-secondary focus:border-brand-secondary text-slate-300"/>
                                     </div>
                                 </div>
                             </div>
                             <div className="mt-4 flex justify-end">
-                                <button onClick={clearSortAndFilters} className="text-sm font-medium text-brand-primary hover:text-brand-primary/80">{t.clearFilters}</button>
+                                <button onClick={clearSortAndFilters} className="text-sm font-medium text-brand-secondary hover:text-brand-secondary/80">{t.clearFilters}</button>
                             </div>
                         </div>
 
                         <div className="space-y-4">
                             {processedReports.length > 0 ? (
                                 processedReports.map(report => (
-                                    <div key={report.id} className="p-4 border rounded-lg hover:shadow-lg transition-shadow flex flex-col sm:flex-row items-start sm:items-center space-y-3 sm:space-y-0 sm:space-x-4">
+                                    <div key={report.id} className="p-4 bg-black/20 border border-white/10 rounded-lg hover:shadow-lg transition-shadow flex flex-col sm:flex-row items-start sm:items-center space-y-3 sm:space-y-0 sm:space-x-4">
                                         <img src={report.imageUrl} alt={report.item} className="w-24 h-24 object-cover rounded-md bg-slate-100 flex-shrink-0" />
                                         <div className="flex-grow">
                                             <div className="flex justify-between items-start">
                                                 <div>
-                                                    <span className={`text-xs font-bold uppercase ${report.type === 'lost' ? 'text-red-600' : 'text-green-600'}`}>{report.type}</span>
-                                                    <h3 className="text-lg font-semibold text-brand-dark">{report.item}</h3>
+                                                    <span className={`text-xs font-bold uppercase ${report.type === 'lost' ? 'text-red-400' : 'text-green-400'}`}>{report.type}</span>
+                                                    <h3 className="text-lg font-semibold text-white">{report.item}</h3>
                                                 </div>
                                                 <div className="flex flex-col items-end">
-                                                    <span className={`text-xs px-2 py-1 font-medium rounded-full ${statusStyles[report.status]}`}>
+                                                    <span className={`text-xs px-2 py-1 font-medium rounded-full border ${statusStyles[report.status]}`}>
                                                         {translateStatus(report.status)}
                                                     </span>
                                                     {report.matches && report.matches.length > 0 && (
@@ -191,7 +191,7 @@ const ProfilePage: React.FC = () => {
                                                     )}
                                                 </div>
                                             </div>
-                                            <p className="text-sm text-slate-500 mt-1">{t.profileReportedOn} {report.date}</p>
+                                            <p className="text-sm text-slate-400 mt-1">{t.profileReportedOn} {report.date}</p>
                                         </div>
                                         <button onClick={() => setSelectedReport(report)} className="w-full sm:w-auto px-4 py-2 bg-brand-secondary text-white font-semibold text-sm rounded-md hover:opacity-90 transition-opacity">
                                             {t.profileViewDetails}
@@ -199,7 +199,7 @@ const ProfilePage: React.FC = () => {
                                     </div>
                                 ))
                             ) : (
-                                <p className="text-center text-slate-500 py-8">{t.profileNoReports}</p>
+                                <p className="text-center text-slate-400 py-8">{t.profileNoReports}</p>
                             )}
                         </div>
                     </div>

@@ -38,7 +38,7 @@ const HomePage: React.FC = () => {
 
       <div className="mx-auto max-w-4xl text-center z-10">
         <div className="bg-white/10 backdrop-blur-lg p-8 sm:p-12 rounded-2xl border border-white/20 shadow-2xl">
-          <h1 className="text-4xl font-bold tracking-tight text-white sm:text-6xl">
+          <h1 className="text-4xl font-bold tracking-tight text-white sm:text-6xl" style={{textShadow: '0 2px 10px rgba(0,0,0,0.3)'}}>
             {t.homeWelcome} <span className="text-brand-secondary">foundtastic</span>
           </h1>
           <p className="mt-6 text-lg leading-8 text-slate-300">
@@ -48,7 +48,7 @@ const HomePage: React.FC = () => {
             {t.homeEvent}
           </p>
           <div className="mt-10">
-              <Link to="/report" className="group relative inline-block rounded-md bg-brand-secondary px-8 py-4 text-lg font-semibold text-white shadow-lg hover:shadow-brand-secondary/50 transition-all duration-300 transform hover:scale-105 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-secondary">
+              <Link to="/report" className="group relative inline-block rounded-md bg-brand-secondary px-8 py-4 text-lg font-semibold text-white shadow-lg hover:shadow-[0_0_25px_rgba(234,88,12,0.7)] transition-all duration-300 transform hover:scale-105 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-secondary">
                 <span className="absolute inset-0 bg-white/20 opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-md"></span>
                 {t.homeButton}
               </Link>
@@ -67,7 +67,7 @@ const HomePage: React.FC = () => {
               className={`px-5 py-2.5 font-medium rounded-lg shadow-lg transition-all duration-300 transform hover:-translate-y-1 text-sm sm:text-base border ${
                 language === lang.code
                   ? 'bg-white/20 border-brand-secondary text-white ring-2 ring-brand-secondary'
-                  : 'bg-white/10 border-white/20 text-slate-300 hover:bg-white/20 hover:text-white'
+                  : 'bg-white/10 border-white/20 text-slate-300 hover:bg-white/20 hover:text-white hover:border-brand-secondary/70'
               } backdrop-blur-sm`}
             >
               {lang.name}

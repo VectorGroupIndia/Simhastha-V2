@@ -5,6 +5,13 @@ import { useLanguage } from '../contexts/LanguageContext';
 import { mockUsers } from '../data/mockData';
 import Spinner from '../components/Spinner';
 
+const BackgroundBlobs: React.FC = () => (
+    <>
+      <div className="absolute -top-40 -left-40 w-96 h-96 bg-brand-primary/30 rounded-full filter blur-3xl opacity-50 animate-float"></div>
+      <div className="absolute -bottom-40 -right-40 w-96 h-96 bg-brand-secondary/30 rounded-full filter blur-3xl opacity-50 animate-float2"></div>
+    </>
+);
+
 const ClipboardIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
     <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
         <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
@@ -38,22 +45,22 @@ const DemoAccounts: React.FC<{ users: (typeof mockUsers[0] | undefined)[] }> = (
     };
 
     return (
-        <div className="bg-white p-6 shadow-xl rounded-2xl">
-            <h3 className="text-center text-lg font-bold text-brand-dark mb-4">{t.demoAccountsTitle}</h3>
+        <div className="bg-white/10 backdrop-blur-lg p-6 rounded-2xl border border-white/20 shadow-2xl">
+            <h3 className="text-center text-lg font-bold text-white mb-4">{t.demoAccountsTitle}</h3>
             <div className="space-y-4">
                 {users.map(user => user && (
-                    <div key={user.id} className="p-3 bg-slate-50 rounded-lg border border-slate-200">
-                        <p className="font-bold text-brand-primary">{roleTranslations[user.role] || user.role}</p>
+                    <div key={user.id} className="p-3 bg-black/20 rounded-lg border border-white/10">
+                        <p className="font-bold text-brand-secondary">{roleTranslations[user.role] || user.role}</p>
                         <div className="flex items-center justify-between mt-2">
-                            <span className="text-sm text-slate-600 truncate pr-2" title={user.email}>{user.email}</span>
-                             <button onClick={() => handleCopy(user.email, `${user.id}-email`)} className="flex items-center text-sm text-slate-500 hover:text-brand-primary font-medium p-1 rounded-md transition-colors">
-                                {copiedField === `${user.id}-email` ? <><CheckIcon className="text-green-500"/> <span className="ml-1 text-green-500">{t.copied}</span></> : <><ClipboardIcon className="mr-1"/> {t.copyEmail}</>}
+                            <span className="text-sm text-slate-300 truncate pr-2" title={user.email}>{user.email}</span>
+                             <button onClick={() => handleCopy(user.email, `${user.id}-email`)} className="flex items-center text-sm text-slate-400 hover:text-white font-medium p-1 rounded-md transition-colors">
+                                {copiedField === `${user.id}-email` ? <><CheckIcon className="text-green-400"/> <span className="ml-1 text-green-400">{t.copied}</span></> : <><ClipboardIcon className="mr-1"/> {t.copyEmail}</>}
                             </button>
                         </div>
                          <div className="flex items-center justify-between mt-1">
-                            <span className="text-sm text-slate-600">••••••••</span>
-                            <button onClick={() => handleCopy(user.password, `${user.id}-password`)} className="flex items-center text-sm text-slate-500 hover:text-brand-primary font-medium p-1 rounded-md transition-colors">
-                                {copiedField === `${user.id}-password` ? <><CheckIcon className="text-green-500"/> <span className="ml-1 text-green-500">{t.copied}</span></> : <><ClipboardIcon className="mr-1"/> {t.copyPassword}</>}
+                            <span className="text-sm text-slate-300">••••••••</span>
+                            <button onClick={() => handleCopy(user.password, `${user.id}-password`)} className="flex items-center text-sm text-slate-400 hover:text-white font-medium p-1 rounded-md transition-colors">
+                                {copiedField === `${user.id}-password` ? <><CheckIcon className="text-green-400"/> <span className="ml-1 text-green-400">{t.copied}</span></> : <><ClipboardIcon className="mr-1"/> {t.copyPassword}</>}
                             </button>
                         </div>
                     </div>
@@ -108,7 +115,6 @@ const LoginPage: React.FC = () => {
         setLoading(true);
         const userToLogin = mockUsers.find(u => u.role === role);
         if (userToLogin) {
-            // Using a slight delay to allow UI to update to loading state
             setTimeout(async () => {
                 try {
                     await login(userToLogin.email, userToLogin.password);
@@ -128,24 +134,25 @@ const LoginPage: React.FC = () => {
     ].filter(Boolean);
 
     return (
-        <div className="flex min-h-full flex-col items-center justify-center px-4 py-12 sm:px-6 lg:px-8 bg-slate-50">
-            <div className="w-full max-w-md space-y-8">
+        <div className="relative isolate overflow-hidden min-h-screen flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
+             <BackgroundBlobs />
+            <div className="w-full max-w-md space-y-8 z-10">
                 <div>
-                    <h2 className="mt-6 text-center text-3xl font-bold tracking-tight text-brand-dark">
+                    <h2 className="mt-6 text-center text-3xl font-bold tracking-tight text-white">
                         {t.loginTitle}
                     </h2>
-                     <p className="mt-2 text-center text-sm text-slate-600">
+                     <p className="mt-2 text-center text-sm text-slate-300">
                         {t.loginNoAccount}{' '}
-                        <a href="#" className="font-medium text-brand-primary hover:text-brand-primary/80">
+                        <a href="#" className="font-medium text-brand-secondary hover:text-brand-secondary/80">
                             {t.loginSignUp}
                         </a>
                     </p>
                 </div>
                 
-                <div className="bg-white p-8 shadow-xl rounded-2xl">
+                <div className="bg-white/10 backdrop-blur-lg p-8 rounded-2xl border border-white/20 shadow-2xl">
                     <form className="space-y-6" onSubmit={handleSubmit}>
                         <div>
-                            <label htmlFor="email" className="block text-sm font-medium leading-6 text-slate-900">
+                            <label htmlFor="email" className="block text-sm font-medium leading-6 text-slate-300">
                                 {t.loginEmail}
                             </label>
                             <div className="mt-2">
@@ -157,18 +164,18 @@ const LoginPage: React.FC = () => {
                                     required
                                     value={email}
                                     onChange={(e) => setEmail(e.target.value)}
-                                    className="block w-full rounded-md border-0 py-2 px-3 text-slate-900 shadow-sm ring-1 ring-inset ring-slate-300 placeholder:text-slate-400 focus:ring-2 focus:ring-inset focus:ring-brand-primary sm:text-sm sm:leading-6"
+                                    className="block w-full rounded-md border-0 py-2 px-3 bg-white/10 text-white shadow-sm ring-1 ring-inset ring-white/20 placeholder:text-slate-400 focus:ring-2 focus:ring-inset focus:ring-brand-secondary sm:text-sm sm:leading-6"
                                 />
                             </div>
                         </div>
 
                         <div>
                             <div className="flex items-center justify-between">
-                                <label htmlFor="password" className="block text-sm font-medium leading-6 text-slate-900">
+                                <label htmlFor="password" className="block text-sm font-medium leading-6 text-slate-300">
                                     {t.loginPassword}
                                 </label>
                                  <div className="text-sm">
-                                    <a href="#" className="font-semibold text-brand-primary hover:text-brand-primary/80">
+                                    <a href="#" className="font-semibold text-brand-secondary hover:text-brand-secondary/80">
                                         {t.loginForgotPassword}
                                     </a>
                                 </div>
@@ -182,13 +189,13 @@ const LoginPage: React.FC = () => {
                                     required
                                     value={password}
                                     onChange={(e) => setPassword(e.target.value)}
-                                    className="block w-full rounded-md border-0 py-2 px-3 text-slate-900 shadow-sm ring-1 ring-inset ring-slate-300 placeholder:text-slate-400 focus:ring-2 focus:ring-inset focus:ring-brand-primary sm:text-sm sm:leading-6"
+                                    className="block w-full rounded-md border-0 py-2 px-3 bg-white/10 text-white shadow-sm ring-1 ring-inset ring-white/20 placeholder:text-slate-400 focus:ring-2 focus:ring-inset focus:ring-brand-secondary sm:text-sm sm:leading-6"
                                 />
                             </div>
                         </div>
                         
                         {error && (
-                            <p className="text-sm text-red-600 text-center">{error}</p>
+                            <p className="text-sm text-red-400 text-center">{error}</p>
                         )}
 
                         <div>
@@ -212,25 +219,24 @@ const LoginPage: React.FC = () => {
                      <div className="mt-8">
                         <div className="relative">
                             <div className="absolute inset-0 flex items-center" aria-hidden="true">
-                                <div className="w-full border-t border-gray-200" />
+                                <div className="w-full border-t border-gray-200/30" />
                             </div>
                             <div className="relative flex justify-center text-sm font-medium leading-6">
-                                <span className="bg-white px-6 text-gray-600">{t.quickLoginTitle}</span>
+                                <span className="bg-brand-glass-bg/0 px-6 text-gray-400 backdrop-blur-sm">{t.quickLoginTitle}</span>
                             </div>
                         </div>
 
                         <div className="mt-6 grid grid-cols-2 gap-4">
-                            <button onClick={() => handleQuickLogin('user')} disabled={loading} className="flex w-full items-center justify-center gap-3 rounded-md bg-blue-500 px-3 py-2 text-white text-sm font-semibold focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-500 hover:bg-blue-600 disabled:opacity-50">{loading ? <Spinner size="sm" /> : t.quickLoginCitizen}</button>
-                            <button onClick={() => handleQuickLogin('admin')} disabled={loading} className="flex w-full items-center justify-center gap-3 rounded-md bg-red-500 px-3 py-2 text-white text-sm font-semibold focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-500 hover:bg-red-600 disabled:opacity-50">{loading ? <Spinner size="sm" /> : t.quickLoginAdmin}</button>
-                            <button onClick={() => handleQuickLogin('authority')} disabled={loading} className="flex w-full items-center justify-center gap-3 rounded-md bg-purple-500 px-3 py-2 text-white text-sm font-semibold focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-purple-500 hover:bg-purple-600 disabled:opacity-50">{loading ? <Spinner size="sm" /> : t.quickLoginAuthority}</button>
-                            <button onClick={() => handleQuickLogin('volunteer')} disabled={loading} className="flex w-full items-center justify-center gap-3 rounded-md bg-green-500 px-3 py-2 text-white text-sm font-semibold focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-green-500 hover:bg-green-600 disabled:opacity-50">{loading ? <Spinner size="sm" /> : t.quickLoginVolunteer}</button>
+                            <button onClick={() => handleQuickLogin('user')} disabled={loading} className="flex w-full items-center justify-center gap-3 rounded-md bg-blue-500/80 px-3 py-2 text-white text-sm font-semibold focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-500 hover:bg-blue-600/80 disabled:opacity-50">{loading ? <Spinner size="sm" /> : t.quickLoginCitizen}</button>
+                            <button onClick={() => handleQuickLogin('admin')} disabled={loading} className="flex w-full items-center justify-center gap-3 rounded-md bg-red-500/80 px-3 py-2 text-white text-sm font-semibold focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-500 hover:bg-red-600/80 disabled:opacity-50">{loading ? <Spinner size="sm" /> : t.quickLoginAdmin}</button>
+                            <button onClick={() => handleQuickLogin('authority')} disabled={loading} className="flex w-full items-center justify-center gap-3 rounded-md bg-purple-500/80 px-3 py-2 text-white text-sm font-semibold focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-purple-500 hover:bg-purple-600/80 disabled:opacity-50">{loading ? <Spinner size="sm" /> : t.quickLoginAuthority}</button>
+                            <button onClick={() => handleQuickLogin('volunteer')} disabled={loading} className="flex w-full items-center justify-center gap-3 rounded-md bg-green-500/80 px-3 py-2 text-white text-sm font-semibold focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-green-500 hover:bg-green-600/80 disabled:opacity-50">{loading ? <Spinner size="sm" /> : t.quickLoginVolunteer}</button>
                         </div>
                     </div>
                 </div>
-            </div>
-            
-            <div className="w-full max-w-md mt-8">
-                <DemoAccounts users={demoUsers} />
+                 <div className="mt-8">
+                    <DemoAccounts users={demoUsers} />
+                </div>
             </div>
         </div>
     );

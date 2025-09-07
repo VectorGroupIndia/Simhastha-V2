@@ -11,7 +11,7 @@ const Header: React.FC = () => {
   const [isLangDropdownOpen, setLangDropdownOpen] = useState(false);
 
   const navLinkClass = ({ isActive }: { isActive: boolean }) =>
-    `px-3 py-2 rounded-md text-sm font-medium transition-colors ${isActive ? 'bg-white/20 text-white' : 'text-slate-300 hover:bg-white/10 hover:text-white'}`;
+    `px-4 py-2 rounded-full text-sm font-medium transition-all duration-300 transform ${isActive ? 'bg-white/20 text-white shadow-lg' : 'text-slate-300 hover:bg-white/10 hover:text-white hover:scale-105'}`;
 
   const getDashboardLink = () => {
     if (!user) return null;
@@ -38,7 +38,7 @@ const Header: React.FC = () => {
   return (
     <header className="fixed top-0 left-0 right-0 z-50">
       <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-        <nav className="mt-4 flex items-center justify-between p-3 bg-white/10 backdrop-blur-md rounded-xl border border-white/20 shadow-lg" aria-label="Global">
+        <nav className="mt-4 flex items-center justify-between p-3 bg-white/10 backdrop-blur-md rounded-xl border border-white/20 shadow-2xl" aria-label="Global">
           <div className="flex lg:flex-1">
             <Link to="/" className="-m-1.5 p-1.5">
               <span className="sr-only">Foundtastic</span>
@@ -57,7 +57,7 @@ const Header: React.FC = () => {
               </svg>
             </button>
           </div>
-          <div className="hidden lg:flex lg:gap-x-8">
+          <div className="hidden lg:flex lg:gap-x-2">
             <NavLink to="/" className={navLinkClass}>{t.navHome}</NavLink>
             <NavLink to="/about" className={navLinkClass}>{t.navAbout}</NavLink>
             <NavLink to="/contact" className={navLinkClass}>{t.navContact}</NavLink>

@@ -12,11 +12,11 @@ interface ReportDetailsModalProps {
 }
 
 const LocationIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
-    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>
+    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>
 );
 
 const CalendarIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
-    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
 );
 
 
@@ -86,9 +86,9 @@ const ReportDetailsModal: React.FC<ReportDetailsModalProps> = ({ report, onClose
 
     return (
         <div className="fixed inset-0 bg-black bg-opacity-60 backdrop-blur-sm flex items-center justify-center z-50 p-4" onClick={onClose}>
-            <div className="bg-white rounded-xl shadow-2xl max-w-3xl w-full transform transition-all duration-300 scale-95 hover:scale-100" onClick={e => e.stopPropagation()}>
+            <div className="bg-white/10 backdrop-blur-lg border border-white/20 text-white rounded-xl shadow-2xl max-w-3xl w-full transform transition-all duration-300 scale-95 hover:scale-100" onClick={e => e.stopPropagation()}>
                 <div className="p-6 md:p-8 relative max-h-[90vh] overflow-y-auto">
-                    <button onClick={onClose} className="absolute top-4 right-4 text-slate-400 hover:text-slate-800 transition-colors z-10">
+                    <button onClick={onClose} className="absolute top-4 right-4 text-slate-400 hover:text-white transition-colors z-10">
                          <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor" aria-hidden="true">
                             <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
                         </svg>
@@ -96,23 +96,23 @@ const ReportDetailsModal: React.FC<ReportDetailsModalProps> = ({ report, onClose
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                         {/* Image Column */}
-                        <div className="aspect-square bg-slate-100 rounded-lg overflow-hidden">
+                        <div className="aspect-square bg-black/20 rounded-lg overflow-hidden">
                             <img src={report.imageUrl} alt={report.item} className="w-full h-full object-cover" />
                         </div>
 
                         {/* Details Column */}
                         <div className="flex flex-col">
                             <div>
-                                <p className="text-sm font-semibold uppercase tracking-wider text-brand-primary">
+                                <p className="text-sm font-semibold uppercase tracking-wider text-brand-secondary">
                                     {report.type === 'lost' ? t.modalLostTitle : t.modalFoundTitle}
                                 </p>
-                                <h2 className="text-3xl font-bold text-brand-dark mt-1">{report.item}</h2>
-                                 <span className={`mt-3 inline-block px-3 py-1 text-sm font-medium rounded-full ${statusStyles[report.status]}`}>
+                                <h2 className="text-3xl font-bold text-white mt-1">{report.item}</h2>
+                                 <span className={`mt-3 inline-block px-3 py-1 text-sm font-medium rounded-full border ${statusStyles[report.status]}`}>
                                     {translateStatus(report.status)}
                                 </span>
                             </div>
                             
-                            <div className="mt-6 space-y-4 text-slate-600">
+                            <div className="mt-6 space-y-4 text-slate-300">
                                 <div className="flex items-start">
                                     <CalendarIcon className="w-5 h-5 mr-3 mt-0.5 text-brand-secondary flex-shrink-0" />
                                     <span><strong>{t.modalDate}</strong> {report.date}</span>
@@ -123,31 +123,31 @@ const ReportDetailsModal: React.FC<ReportDetailsModalProps> = ({ report, onClose
                                 </div>
                             </div>
 
-                             <div className="mt-6 border-t pt-4">
-                                <h3 className="font-semibold text-slate-800">{t.modalDescription}</h3>
-                                <p className="text-slate-600 text-sm mt-2">{report.description}</p>
+                             <div className="mt-6 border-t border-white/20 pt-4">
+                                <h3 className="font-semibold text-white">{t.modalDescription}</h3>
+                                <p className="text-slate-300 text-sm mt-2">{report.description}</p>
                             </div>
                         </div>
                     </div>
                     
                     {report.matches && report.matches.length > 0 && report.reportCategory === 'item' && (
-                        <div className="mt-8 border-t pt-6">
+                        <div className="mt-8 border-t border-white/20 pt-6">
                             <SuggestedMatches matchIds={report.matches} currentReportId={report.id} />
                         </div>
                     )}
                     
                     {confirmedSightings.length > 0 && (
-                        <div className="mt-8 border-t pt-6">
+                        <div className="mt-8 border-t border-white/20 pt-6">
                             <h3 className="text-xl font-bold text-brand-secondary mb-4">{t.confirmedSightings}</h3>
                              <div className="space-y-6">
                                 {confirmedSightings.map(sighting => (
-                                <div key={sighting.id} className="p-4 border rounded-lg bg-green-50">
+                                <div key={sighting.id} className="p-4 border border-green-400/30 rounded-lg bg-green-500/10">
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                         <div>
-                                            <p className="font-semibold text-green-800">Sighting at {sighting.timestamp.toLocaleString()}</p>
-                                            <p className="text-sm text-green-700 mt-1"><strong>Location:</strong> {sighting.cameraLocation}</p>
-                                            <p className="text-sm text-green-700"><strong>Confidence:</strong> {(sighting.confidence * 100).toFixed(1)}%</p>
-                                            <div className="mt-3 h-40 rounded-md overflow-hidden border border-green-200">
+                                            <p className="font-semibold text-green-300">Sighting at {sighting.timestamp.toLocaleString()}</p>
+                                            <p className="text-sm text-green-400 mt-1"><strong>Location:</strong> {sighting.cameraLocation}</p>
+                                            <p className="text-sm text-green-400"><strong>Confidence:</strong> {(sighting.confidence * 100).toFixed(1)}%</p>
+                                            <div className="mt-3 h-40 rounded-md overflow-hidden border border-green-200/50">
                                                  <iframe
                                                     width="100%"
                                                     height="100%"
@@ -160,8 +160,8 @@ const ReportDetailsModal: React.FC<ReportDetailsModalProps> = ({ report, onClose
                                             </div>
                                         </div>
                                         <div>
-                                            <p className="font-semibold text-green-800 mb-2">Snapshot</p>
-                                            <img src={sighting.snapshotUrl} alt="Sighting snapshot" className="w-full h-auto rounded-lg border-2 border-green-200" />
+                                            <p className="font-semibold text-green-300 mb-2">Snapshot</p>
+                                            <img src={sighting.snapshotUrl} alt="Sighting snapshot" className="w-full h-auto rounded-lg border-2 border-green-200/50" />
                                         </div>
                                     </div>
                                 </div>

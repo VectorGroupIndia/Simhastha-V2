@@ -14,24 +14,30 @@
               'brand-secondary': '#ea580c',
               'brand-light': '#eff6ff',
               'brand-dark': '#1e293b',
-              'brand-bg': '#0f172a'
+              'brand-bg': '#0f172a',
+              'brand-glass-bg': '#111827'
             },
             fontFamily: {
               sans: ['Inter', 'sans-serif'],
             },
             keyframes: {
               float: {
-                '0%, 100%': { transform: 'translateY(0px)' },
-                '50%': { transform: 'translateY(-20px)' },
+                '0%, 100%': { transform: 'translate(0px, 0px)' },
+                '50%': { transform: 'translate(-20px, -30px)' },
               },
                float2: {
-                '0%, 100%': { transform: 'translateY(-10px)' },
-                '50%': { transform: 'translateY(10px)' },
+                '0%, 100%': { transform: 'translate(0px, 0px)' },
+                '50%': { transform: 'translate(30px, 20px)' },
+              },
+               float3: {
+                '0%, 100%': { transform: 'translateY(0px)' },
+                '50%': { transform: 'translateY(-25px)' },
               },
             },
             animation: {
-              float: 'float 6s ease-in-out infinite',
-              float2: 'float2 8s ease-in-out infinite',
+              float: 'float 8s ease-in-out infinite',
+              float2: 'float2 10s ease-in-out infinite',
+              float3: 'float3 6s ease-in-out infinite',
             },
           },
         },

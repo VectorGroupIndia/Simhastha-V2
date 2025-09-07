@@ -33,24 +33,25 @@ const Footer: React.FC = () => {
   const { t } = useLanguage();
 
   return (
-    <footer className="bg-transparent text-white">
-      <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="flex flex-col items-center text-center space-y-6">
-          
-          <div>
-            <p className="text-sm text-slate-300">{t.footerMotto}</p>
-            <p className="text-lg font-semibold text-brand-secondary mt-1">{t.footerEvent}</p>
-            <p className="text-xs text-slate-400 mt-2">{t.footerCopyright}</p>
+    <footer className="text-white w-full">
+      <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-4">
+          <div className="bg-white/10 backdrop-blur-lg rounded-xl border border-white/20 shadow-2xl p-6 text-center sm:text-left">
+              <div className="flex flex-col sm:flex-row items-center justify-between gap-6">
+                  <div className="flex-1">
+                      <p className="text-sm text-slate-300">{t.footerMotto}</p>
+                      <p className="text-lg font-semibold text-brand-secondary mt-1">{t.footerEvent}</p>
+                  </div>
+                  <div className="flex items-center space-x-6">
+                       <a href="#" className="text-slate-300 hover:text-white transition-colors"><FacebookIcon className="w-5 h-5"/></a>
+                        <a href="#" className="text-slate-300 hover:text-white transition-colors"><LinkedInIcon className="w-5 h-5"/></a>
+                        <a href="#" className="text-slate-300 hover:text-white transition-colors"><TwitterIcon className="w-5 h-5"/></a>
+                        <a href="#" className="text-slate-300 hover:text-white transition-colors"><InstagramIcon className="w-5 h-5"/></a>
+                  </div>
+              </div>
+              <div className="mt-6 border-t border-white/20 pt-4 text-center">
+                  <p className="text-xs text-slate-400">{t.footerCopyright}</p>
+              </div>
           </div>
-          
-          <div className="flex items-center space-x-6">
-            <a href="#" className="text-slate-300 hover:text-white transition-colors"><FacebookIcon className="w-5 h-5"/></a>
-            <a href="#" className="text-slate-300 hover:text-white transition-colors"><LinkedInIcon className="w-5 h-5"/></a>
-            <a href="#" className="text-slate-300 hover:text-white transition-colors"><TwitterIcon className="w-5 h-5"/></a>
-            <a href="#" className="text-slate-300 hover:text-white transition-colors"><InstagramIcon className="w-5 h-5"/></a>
-          </div>
-
-        </div>
       </div>
     </footer>
   );
