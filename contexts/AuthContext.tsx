@@ -32,6 +32,8 @@ interface AuthContextType {
   logout: () => void;
   switchActiveGroup: (groupId: string) => void;
   updateUserData: (updatedData: Partial<User>) => void;
+  updateProfile: (userId: string, newName: string) => Promise<void>;
+  changePassword: (email: string, currentPass: string, newPass: string) => Promise<void>;
   loading: boolean;
 }
 
@@ -153,6 +155,38 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         }
     };
 
+    const updateProfile = async (userId: string, newName: string): Promise<void> => {
+        return new Promise((resolve) => {
+            // Update the master user list
+            const storedUsers = localStorage.getItem('foundtastic-all-users');
+            let users: FullUser[] = storedUsers ? JSON.parse(storedUsers) : [];
+            users = users.map(u => u.id === userId ? { ...u, name: newName } : u);
+            localStorage.setItem('foundtastic-all-users', JSON.stringify(users));
+
+            // Update the current session user
+            updateUserData({ name: newName });
+            resolve();
+        });
+    };
+
+    const changePassword = async (email: string, currentPass: string, newPass: string): Promise<void> => {
+        return new Promise((resolve, reject) => {
+            const storedAuthData = localStorage.getItem('foundtastic-auth-data');
+            let authData: AuthData[] = storedAuthData ? JSON.parse(storedAuthData) : [];
+            const userAuthIndex = authData.findIndex(u => u.email.toLowerCase() === email.toLowerCase());
+
+            if (userAuthIndex === -1 || authData[userAuthIndex].password !== currentPass) {
+                reject(new Error('Your current password does not match.'));
+                return;
+            }
+
+            authData[userAuthIndex].password = newPass;
+            localStorage.setItem('foundtastic-auth-data', JSON.stringify(authData));
+            resolve();
+        });
+    };
+
+
     const switchActiveGroup = (groupId: string) => {
         if (user && user.groupIds.includes(groupId)) {
             updateUserData({ activeGroupId: groupId });
@@ -166,7 +200,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     };
 
     return (
-        <AuthContext.Provider value={{ user, login, register, logout, switchActiveGroup, updateUserData, loading }}>
+        <AuthContext.Provider value={{ user, login, register, logout, switchActiveGroup, updateUserData, updateProfile, changePassword, loading }}>
             {!loading && children}
         </AuthContext.Provider>
     );

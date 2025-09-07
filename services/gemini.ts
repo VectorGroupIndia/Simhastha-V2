@@ -1,5 +1,3 @@
-
-
 import { GoogleGenAI, Type } from "@google/genai";
 import { ItemCategory } from "../types";
 import { CATEGORIES } from "../constants";

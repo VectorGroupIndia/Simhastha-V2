@@ -26,6 +26,7 @@ import UserManagement from './pages/admin/UserManagement';
 import ReportManagement from './pages/admin/ReportManagement';
 import FraudDetection from './pages/admin/FraudDetection';
 import AnalyticsPage from './pages/admin/AnalyticsPage';
+import SettingsPage from './pages/admin/SettingsPage';
 
 
 // Authority Pages
@@ -70,6 +71,7 @@ const AppContent: React.FC = () => {
                     <Route path="/admin/reports" element={<ProtectedRoute role="admin"><ReportManagement /></ProtectedRoute>} />
                     <Route path="/admin/fraud-detection" element={<ProtectedRoute role="admin"><FraudDetection /></ProtectedRoute>} />
                     <Route path="/admin/analytics" element={<ProtectedRoute role="admin"><AnalyticsPage /></ProtectedRoute>} />
+                    <Route path="/admin/settings" element={<ProtectedRoute role="admin"><SettingsPage /></ProtectedRoute>} />
 
 
                     {/* Authority Routes */}

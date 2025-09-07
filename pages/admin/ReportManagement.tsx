@@ -1,11 +1,10 @@
-
 import React, { useState, useMemo, useEffect } from 'react';
 import Sidebar from './components/Sidebar';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { Report, ReportStatus } from '../ProfilePage';
 import DashboardHeader from '../../components/DashboardHeader';
+import ReportDetailsModal from '../../components/ReportDetailsModal';
 
-// Styles for the status dropdown, providing better visual feedback.
 const selectStatusStyles: { [key in ReportStatus]: string } = {
     pending: 'bg-yellow-100 text-yellow-800',
     in_review: 'bg-blue-100 text-blue-800',
@@ -18,11 +17,15 @@ const ReportManagement: React.FC = () => {
     const [reports, setReports] = useState<Report[]>([]);
     const [searchTerm, setSearchTerm] = useState('');
     const [statusFilter, setStatusFilter] = useState<ReportStatus | 'all'>('all');
+    const [typeFilter, setTypeFilter] = useState<'all' | 'lost' | 'found'>('all');
     const [sortOption, setSortOption] = useState<string>('date_desc');
     const [startDate, setStartDate] = useState('');
     const [endDate, setEndDate] = useState('');
+    const [viewingReport, setViewingReport] = useState<Report | null>(null);
+    const [currentPage, setCurrentPage] = useState(1);
+    const [reportsPerPage] = useState(10);
     
-     useEffect(() => {
+    useEffect(() => {
         try {
             const storedReports = localStorage.getItem('foundtastic-all-reports');
             if (storedReports) {
@@ -37,6 +40,7 @@ const ReportManagement: React.FC = () => {
         let filtered = reports.filter(report => {
             const matchesSearch = report.item.toLowerCase().includes(searchTerm.toLowerCase());
             const matchesStatus = statusFilter === 'all' || report.status === statusFilter;
+            const matchesType = typeFilter === 'all' || report.type === typeFilter;
             
             const reportDate = new Date(report.date);
             const start = startDate ? new Date(startDate) : null;
@@ -45,7 +49,7 @@ const ReportManagement: React.FC = () => {
             if (end) end.setHours(23, 59, 59, 999);
             const matchesDate = (!start || reportDate >= start) && (!end || reportDate <= end);
 
-            return matchesSearch && matchesStatus && matchesDate;
+            return matchesSearch && matchesStatus && matchesType && matchesDate;
         });
 
         const [sortKey, sortOrder] = sortOption.split('_');
@@ -67,7 +71,15 @@ const ReportManagement: React.FC = () => {
         });
 
         return filtered;
-    }, [reports, searchTerm, statusFilter, startDate, endDate, sortOption]);
+    }, [reports, searchTerm, statusFilter, typeFilter, startDate, endDate, sortOption]);
+
+    const paginatedReports = useMemo(() => {
+        const indexOfLastReport = currentPage * reportsPerPage;
+        const indexOfFirstReport = indexOfLastReport - reportsPerPage;
+        return filteredReports.slice(indexOfFirstReport, indexOfLastReport);
+    }, [filteredReports, currentPage, reportsPerPage]);
+
+    const totalPages = Math.ceil(filteredReports.length / reportsPerPage);
 
     const handleStatusChange = (id: string, newStatus: ReportStatus) => {
         const updatedReports = reports.map(report =>
@@ -80,9 +92,11 @@ const ReportManagement: React.FC = () => {
     const clearFilters = () => {
         setSearchTerm('');
         setStatusFilter('all');
+        setTypeFilter('all');
         setSortOption('date_desc');
         setStartDate('');
         setEndDate('');
+        setCurrentPage(1);
     };
 
     return (
@@ -92,49 +106,84 @@ const ReportManagement: React.FC = () => {
                 <DashboardHeader title={t.adminReportManagement} />
 
                 <div className="bg-white p-6 rounded-lg shadow-md">
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-4">
-                        <input
-                            type="text"
-                            placeholder={t.adminSearchReports}
-                            value={searchTerm}
-                            onChange={(e) => setSearchTerm(e.target.value)}
-                            className="lg:col-span-3 block w-full px-3 py-2 bg-white border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-brand-primary focus:border-brand-primary"
-                        />
-                         <select
-                            value={statusFilter}
-                            onChange={(e) => setStatusFilter(e.target.value as ReportStatus | 'all')}
-                            className="block w-full px-3 py-2 bg-white border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-brand-primary focus:border-brand-primary"
-                        >
-                            <option value="all">{t.adminAllStatuses}</option>
-                            <option value="pending">{t.status.pending}</option>
-                            <option value="in_review">{t.status.in_review}</option>
-                            <option value="resolved">{t.status.resolved}</option>
-                            <option value="closed">{t.status.closed}</option>
-                        </select>
-                        <select
-                            value={sortOption}
-                            onChange={(e) => setSortOption(e.target.value)}
-                            className="block w-full px-3 py-2 bg-white border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-brand-primary focus:border-brand-primary"
-                        >
-                            <option value="date_desc">{t.sortDateNewest}</option>
-                            <option value="date_asc">{t.sortDateOldest}</option>
-                            <option value="item_asc">{t.sortItemAZ}</option>
-                            <option value="item_desc">{t.sortItemZA}</option>
-                            <option value="status_asc">{t.sortStatusAZ}</option>
-                            <option value="status_desc">{t.sortStatusZA}</option>
-                        </select>
-                        <div className="lg:col-span-3 grid grid-cols-1 sm:grid-cols-3 gap-4 items-end">
-                            <div className="sm:col-span-2 grid grid-cols-2 gap-2">
-                                <div>
-                                    <label htmlFor="startDate" className="block text-sm font-medium text-slate-700">{t.dateFrom}</label>
-                                    <input type="date" id="startDate" value={startDate} onChange={(e) => setStartDate(e.target.value)} className="mt-1 block w-full px-3 py-2 bg-white border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-brand-primary focus:border-brand-primary"/>
-                                </div>
-                                <div>
-                                    <label htmlFor="endDate" className="block text-sm font-medium text-slate-700">{t.dateTo}</label>
-                                    <input type="date" id="endDate" value={endDate} onChange={(e) => setEndDate(e.target.value)} className="mt-1 block w-full px-3 py-2 bg-white border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-brand-primary focus:border-brand-primary"/>
-                                </div>
-                            </div>
-                            <button onClick={clearFilters} className="w-full px-4 py-2 bg-slate-600 text-white font-semibold text-sm rounded-md hover:bg-slate-700 transition-colors">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-4 mb-4 items-end">
+                        {/* Search Input */}
+                        <div className="sm:col-span-2 lg:col-span-6">
+                            <label htmlFor="search" className="sr-only">{t.adminSearchReports}</label>
+                            <input
+                                type="text"
+                                id="search"
+                                placeholder={t.adminSearchReports}
+                                value={searchTerm}
+                                onChange={(e) => setSearchTerm(e.target.value)}
+                                className="block w-full px-3 py-2 bg-white border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-brand-primary focus:border-brand-primary"
+                            />
+                        </div>
+
+                        {/* Type Filter */}
+                        <div className="lg:col-span-1">
+                            <label htmlFor="typeFilter" className="block text-sm font-medium text-slate-700">{t.adminReportsTableHeadType}</label>
+                            <select
+                                id="typeFilter"
+                                value={typeFilter}
+                                onChange={(e) => setTypeFilter(e.target.value as 'all' | 'lost' | 'found')}
+                                className="mt-1 block w-full px-3 py-2 bg-white border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-brand-primary focus:border-brand-primary"
+                            >
+                                <option value="all">{t.adminAllTypes}</option>
+                                <option value="lost">{t.adminReportTypeLost}</option>
+                                <option value="found">{t.adminReportTypeFound}</option>
+                            </select>
+                        </div>
+
+                        {/* Status Filter */}
+                        <div className="lg:col-span-1">
+                            <label htmlFor="statusFilter" className="block text-sm font-medium text-slate-700">{t.adminReportsTableHeadStatus}</label>
+                            <select
+                                id="statusFilter"
+                                value={statusFilter}
+                                onChange={(e) => setStatusFilter(e.target.value as ReportStatus | 'all')}
+                                className="mt-1 block w-full px-3 py-2 bg-white border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-brand-primary focus:border-brand-primary"
+                            >
+                                <option value="all">{t.adminAllStatuses}</option>
+                                <option value="pending">{t.status.pending}</option>
+                                <option value="in_review">{t.status.in_review}</option>
+                                <option value="resolved">{t.status.resolved}</option>
+                                <option value="closed">{t.status.closed}</option>
+                            </select>
+                        </div>
+                        
+                        {/* Date Filters */}
+                        <div>
+                            <label htmlFor="startDate" className="block text-sm font-medium text-slate-700">{t.dateFrom}</label>
+                            <input type="date" id="startDate" value={startDate} onChange={(e) => setStartDate(e.target.value)} className="mt-1 block w-full px-3 py-2 bg-white border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-brand-primary focus:border-brand-primary"/>
+                        </div>
+                        <div>
+                            <label htmlFor="endDate" className="block text-sm font-medium text-slate-700">{t.dateTo}</label>
+                            <input type="date" id="endDate" value={endDate} onChange={(e) => setEndDate(e.target.value)} className="mt-1 block w-full px-3 py-2 bg-white border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-brand-primary focus:border-brand-primary"/>
+                        </div>
+
+                        {/* Sort Filter */}
+                        <div className="lg:col-span-1">
+                            <label htmlFor="sortOption" className="block text-sm font-medium text-slate-700">{t.profileSortBy}</label>
+                            <select
+                                id="sortOption"
+                                value={sortOption}
+                                onChange={(e) => setSortOption(e.target.value)}
+                                className="mt-1 block w-full px-3 py-2 bg-white border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-brand-primary focus:border-brand-primary"
+                            >
+                                <option value="date_desc">{t.sortDateNewest}</option>
+                                <option value="date_asc">{t.sortDateOldest}</option>
+                                <option value="item_asc">{t.sortItemAZ}</option>
+                                <option value="item_desc">{t.sortItemZA}</option>
+                                <option value="status_asc">{t.sortStatusAZ}</option>
+                                <option value="status_desc">{t.sortStatusZA}</option>
+                            </select>
+                        </div>
+
+                        {/* Clear Button */}
+                        <div className="lg:col-span-1">
+                            <label className="block text-sm font-medium text-slate-700 invisible">Clear</label>
+                            <button onClick={clearFilters} className="mt-1 w-full px-4 py-2 bg-slate-600 text-white font-semibold text-sm rounded-md hover:bg-slate-700 transition-colors">
                                 {t.adminClearFilters}
                             </button>
                         </div>
@@ -149,12 +198,11 @@ const ReportManagement: React.FC = () => {
                                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{t.adminReportsTableHeadMatches}</th>
                                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{t.adminReportsTableHeadStatus}</th>
                                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{t.adminReportsTableHeadDate}</th>
-                                    {/* FIX: Corrected the invalid translation key `t.adminReports` to `t.adminReportsTableHeadActions` */}
                                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{t.adminReportsTableHeadActions}</th>
                                 </tr>
                             </thead>
                             <tbody className="bg-white divide-y divide-gray-200">
-                                {filteredReports.map((report) => (
+                                {paginatedReports.map((report) => (
                                     <tr key={report.id}>
                                         <td className="px-6 py-4 whitespace-nowrap">
                                             <div className="flex items-center">
@@ -175,34 +223,42 @@ const ReportManagement: React.FC = () => {
                                             {report.matches?.length || 0}
                                         </td>
                                         <td className="px-6 py-4 whitespace-nowrap">
-                                            <div className="relative inline-block text-left">
-                                                <select
-                                                    value={report.status}
-                                                    onChange={(e) => handleStatusChange(report.id, e.target.value as ReportStatus)}
-                                                    className={`appearance-none w-full px-3 pr-8 py-1 text-xs leading-5 font-semibold rounded-full border-0 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand-primary cursor-pointer ${selectStatusStyles[report.status]}`}
-                                                >
-                                                    <option value="pending" className="font-medium text-black bg-white">{t.status.pending}</option>
-                                                    <option value="in_review" className="font-medium text-black bg-white">{t.status.in_review}</option>
-                                                    <option value="resolved" className="font-medium text-black bg-white">{t.status.resolved}</option>
-                                                    <option value="closed" className="font-medium text-black bg-white">{t.status.closed}</option>
-                                                </select>
-                                                <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-inherit">
-                                                    <svg className="h-4 w-4" fill="currentColor" viewBox="0 0 20 20">
-                                                        <path fillRule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 11.168l3.71-3.938a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z" clipRule="evenodd" />
-                                                    </svg>
-                                                </div>
-                                            </div>
+                                            <select
+                                                value={report.status}
+                                                onChange={(e) => handleStatusChange(report.id, e.target.value as ReportStatus)}
+                                                className={`appearance-none w-full px-3 pr-8 py-1 text-xs leading-5 font-semibold rounded-full border-0 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand-primary cursor-pointer ${selectStatusStyles[report.status]}`}
+                                            >
+                                                <option value="pending" className="font-medium text-black bg-white">{t.status.pending}</option>
+                                                <option value="in_review" className="font-medium text-black bg-white">{t.status.in_review}</option>
+                                                <option value="resolved" className="font-medium text-black bg-white">{t.status.resolved}</option>
+                                                <option value="closed" className="font-medium text-black bg-white">{t.status.closed}</option>
+                                            </select>
                                         </td>
                                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{report.date}</td>
                                         <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                                            <button className="text-indigo-600 hover:text-indigo-900">{t.adminActionView}</button>
+                                            <button onClick={() => setViewingReport(report)} className="text-indigo-600 hover:text-indigo-900">{t.adminActionView}</button>
                                         </td>
                                     </tr>
                                 ))}
                             </tbody>
                         </table>
                     </div>
+
+                    <div className="py-3 flex items-center justify-between border-t">
+                        <div className="text-sm text-gray-700">
+                            {t.paginationShowing.replace('{start}', ((currentPage-1)*reportsPerPage + 1).toString()).replace('{end}', (Math.min(currentPage*reportsPerPage, filteredReports.length)).toString()).replace('{total}', filteredReports.length.toString())}
+                        </div>
+                        <div className="flex-1 flex justify-between sm:justify-end">
+                            <button onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={currentPage === 1} className="relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50">
+                                {t.paginationPrevious}
+                            </button>
+                            <button onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} disabled={currentPage === totalPages} className="ml-3 relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50">
+                                {t.paginationNext}
+                            </button>
+                        </div>
+                    </div>
                 </div>
+                {viewingReport && <ReportDetailsModal report={viewingReport} onClose={() => setViewingReport(null)} />}
             </main>
         </div>
     );

@@ -1,9 +1,8 @@
-
-
 import React, { useState, useEffect, useMemo } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useLanguage } from '../contexts/LanguageContext';
 import ReportDetailsModal from '../components/ReportDetailsModal';
+import Spinner from '../components/Spinner';
 
 export type ReportStatus = 'pending' | 'in_review' | 'resolved' | 'closed';
 
@@ -39,25 +38,32 @@ const BackgroundBlobs: React.FC = () => (
     </>
 );
 
-
 const ProfilePage: React.FC = () => {
-    const { user } = useAuth();
+    const { user, updateProfile, changePassword } = useAuth();
     const { t, translateStatus } = useLanguage();
+    
+    const [isEditing, setIsEditing] = useState(false);
+    const [profileData, setProfileData] = useState({ name: '' });
+    const [passwordData, setPasswordData] = useState({ currentPassword: '', newPassword: '', confirmPassword: '' });
+    const [errors, setErrors] = useState<Record<string, string>>({});
+    const [isSaving, setIsSaving] = useState(false);
+    const [successMessage, setSuccessMessage] = useState('');
+
     const [reports, setReports] = useState<Report[]>([]);
     const [selectedReport, setSelectedReport] = useState<Report | null>(null);
     const [filter, setFilter] = useState<'all' | 'lost' | 'found'>('all');
-
     const [sortOption, setSortOption] = useState<string>('date_desc');
     const [startDate, setStartDate] = useState('');
     const [endDate, setEndDate] = useState('');
 
     useEffect(() => {
         if (user) {
+            setProfileData({ name: user.name });
             try {
                 const allReportsStr = localStorage.getItem('foundtastic-all-reports');
                 if (allReportsStr) {
                     const allReports: Report[] = JSON.parse(allReportsStr);
-                    setReports(allReports.slice(0, 6)); 
+                    setReports(allReports); 
                 }
             } catch (e) {
                 console.error("Failed to load reports from local storage", e);
@@ -65,6 +71,62 @@ const ProfilePage: React.FC = () => {
         }
     }, [user]);
     
+    const handleEditToggle = () => {
+        setIsEditing(!isEditing);
+        setErrors({});
+        setSuccessMessage('');
+        setPasswordData({ currentPassword: '', newPassword: '', confirmPassword: '' });
+        if(user) setProfileData({ name: user.name });
+    };
+
+    const handleSaveProfile = async () => {
+        if (!user) return;
+        
+        setErrors({});
+        setSuccessMessage('');
+        setIsSaving(true);
+        let hasChanges = false;
+        
+        try {
+            // Update name if changed
+            if (profileData.name.trim() !== user.name) {
+                if (!profileData.name.trim()) {
+                    setErrors(prev => ({ ...prev, name: t.formErrors.nameRequired }));
+                    setIsSaving(false);
+                    return;
+                }
+                await updateProfile(user.id, profileData.name.trim());
+                hasChanges = true;
+            }
+
+            // Update password if fields are filled
+            const { currentPassword, newPassword, confirmPassword } = passwordData;
+            if (currentPassword || newPassword || confirmPassword) {
+                if (!currentPassword) {
+                    setErrors(prev => ({ ...prev, currentPassword: t.formErrors.currentPasswordRequired }));
+                } else if (newPassword.length < 8) {
+                    setErrors(prev => ({ ...prev, newPassword: t.formErrors.passwordLength }));
+                } else if (newPassword !== confirmPassword) {
+                    setErrors(prev => ({ ...prev, confirmPassword: t.formErrors.passwordMatch }));
+                } else {
+                    await changePassword(user.email, currentPassword, newPassword);
+                    hasChanges = true;
+                }
+            }
+
+            if (Object.keys(errors).length === 0 && hasChanges) {
+                setSuccessMessage(t.profileUpdatedSuccess);
+                setIsEditing(false);
+                setPasswordData({ currentPassword: '', newPassword: '', confirmPassword: '' });
+            }
+            
+        } catch (error: any) {
+            setErrors(prev => ({ ...prev, form: error.message }));
+        } finally {
+            setIsSaving(false);
+        }
+    };
+
     const processedReports = useMemo(() => {
         let filtered = reports.filter(report => {
             const matchesType = filter === 'all' || report.type === filter;
@@ -105,6 +167,9 @@ const ProfilePage: React.FC = () => {
         setStartDate('');
         setEndDate('');
     };
+    
+    const getInputClassName = (field: string) => `block w-full rounded-md border-0 py-2 px-3 bg-white/10 text-white shadow-sm ring-1 ring-inset ${errors[field] ? 'ring-red-500/50' : 'ring-white/20'} placeholder:text-slate-400 focus:ring-2 focus:ring-inset focus:ring-brand-secondary sm:text-sm sm:leading-6`;
+
 
     if (!user) {
         return (
@@ -119,15 +184,66 @@ const ProfilePage: React.FC = () => {
             <BackgroundBlobs />
             <div className="container mx-auto px-4 sm:px-6 lg:px-8 z-10">
                 <div className="max-w-4xl mx-auto">
-                    <div className="bg-white/10 backdrop-blur-lg p-6 rounded-2xl border border-white/20 shadow-2xl mb-8 flex items-center space-x-6">
-                        <div className="w-20 h-20 bg-brand-primary/50 rounded-full flex items-center justify-center text-white text-3xl font-bold">
-                            {user.name.charAt(0)}
-                        </div>
-                        <div>
-                            <h1 className="text-3xl font-bold text-white">{user.name}</h1>
-                            <p className="text-slate-300">{user.email}</p>
-                            <p className="text-slate-400 text-sm mt-1">{t.profileMemberSince} {user.memberSince}</p>
-                        </div>
+                    <div className="bg-white/10 backdrop-blur-lg p-6 rounded-2xl border border-white/20 shadow-2xl mb-8">
+                        {isEditing ? (
+                            // EDITING VIEW
+                            <div>
+                                <h2 className="text-2xl font-bold text-white mb-4">{t.profileEditTitle}</h2>
+                                {errors.form && <p className="mb-4 text-sm text-red-400 text-center">{errors.form}</p>}
+                                <div className="space-y-6">
+                                    <div>
+                                        <label htmlFor="name" className="block text-sm font-medium leading-6 text-slate-300">{t.contactFormName}</label>
+                                        <div className="mt-2">
+                                            <input type="text" id="name" value={profileData.name} onChange={e => setProfileData({ ...profileData, name: e.target.value })} className={getInputClassName('name')} />
+                                        </div>
+                                        {errors.name && <p className="mt-1 text-sm text-red-400">{errors.name}</p>}
+                                    </div>
+                                    <div className="border-t border-white/20 pt-6">
+                                        <h3 className="text-lg font-semibold text-white">{t.changePasswordTitle}</h3>
+                                        <div className="mt-4 space-y-4">
+                                            <div>
+                                                <label htmlFor="currentPassword" className="block text-sm font-medium leading-6 text-slate-300">{t.currentPassword}</label>
+                                                <input type="password" id="currentPassword" value={passwordData.currentPassword} onChange={e => setPasswordData({ ...passwordData, currentPassword: e.target.value })} className={getInputClassName('currentPassword')} />
+                                                {errors.currentPassword && <p className="mt-1 text-sm text-red-400">{errors.currentPassword}</p>}
+                                            </div>
+                                             <div>
+                                                <label htmlFor="newPassword" className="block text-sm font-medium leading-6 text-slate-300">{t.newPassword}</label>
+                                                <input type="password" id="newPassword" value={passwordData.newPassword} onChange={e => setPasswordData({ ...passwordData, newPassword: e.target.value })} className={getInputClassName('newPassword')} />
+                                                {errors.newPassword && <p className="mt-1 text-sm text-red-400">{errors.newPassword}</p>}
+                                            </div>
+                                             <div>
+                                                <label htmlFor="confirmPassword" className="block text-sm font-medium leading-6 text-slate-300">{t.confirmNewPassword}</label>
+                                                <input type="password" id="confirmPassword" value={passwordData.confirmPassword} onChange={e => setPasswordData({ ...passwordData, confirmPassword: e.target.value })} className={getInputClassName('confirmPassword')} />
+                                                {errors.confirmPassword && <p className="mt-1 text-sm text-red-400">{errors.confirmPassword}</p>}
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div className="flex items-center justify-end gap-x-4">
+                                        <button type="button" onClick={handleEditToggle} className="text-sm font-semibold leading-6 text-slate-300 hover:text-white">{t.cancelButton}</button>
+                                        <button onClick={handleSaveProfile} disabled={isSaving} className="flex justify-center items-center rounded-md bg-brand-secondary px-4 py-2 text-sm font-semibold text-white shadow-sm hover:opacity-90 disabled:opacity-50">
+                                            {isSaving && <Spinner size="sm" className="mr-2" />}
+                                            {t.saveChanges}
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        ) : (
+                            // DISPLAY VIEW
+                            <div className="flex items-center justify-between">
+                                <div className="flex items-center space-x-6">
+                                    <div className="w-20 h-20 bg-brand-primary/50 rounded-full flex items-center justify-center text-white text-3xl font-bold">
+                                        {user.name.charAt(0)}
+                                    </div>
+                                    <div>
+                                        <h1 className="text-3xl font-bold text-white">{user.name}</h1>
+                                        <p className="text-slate-300">{user.email}</p>
+                                        <p className="text-slate-400 text-sm mt-1">{t.profileMemberSince} {user.memberSince}</p>
+                                    </div>
+                                </div>
+                                <button onClick={handleEditToggle} className="rounded-md bg-white/20 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-white/30">{t.editProfile}</button>
+                            </div>
+                        )}
+                         {successMessage && !isEditing && <p className="mt-4 text-sm text-green-400 text-center">{successMessage}</p>}
                     </div>
 
                     <div className="bg-white/10 backdrop-blur-lg p-6 rounded-2xl border border-white/20 shadow-2xl">

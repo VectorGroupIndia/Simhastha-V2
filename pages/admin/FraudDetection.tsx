@@ -1,10 +1,10 @@
-
 import React, { useState, useMemo, useEffect } from 'react';
 import Sidebar from './components/Sidebar';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { mockReports, mockUsers } from '../../data/mockData';
 import { Report } from '../ProfilePage';
 import DashboardHeader from '../../components/DashboardHeader';
+import { PlatformSettings } from './SettingsPage';
 
 interface SuspiciousReport extends Report {
     reporterName: string;
@@ -12,23 +12,24 @@ interface SuspiciousReport extends Report {
     reason: string;
 }
 
-// These would typically be more configurable
-const HIGH_VALUE_KEYWORDS = ['iphone', 'laptop', 'camera', 'jewelry', 'macbook', 'dslr', 'drone'];
-const SHORT_DESC_THRESHOLD = 50; // characters
 const HIGH_FREQUENCY_THRESHOLD = 3; // reports
 
 const FraudDetection: React.FC = () => {
     const { t } = useLanguage();
     const [reports, setReports] = useState<Report[]>([]);
     const [users, setUsers] = useState<typeof mockUsers>([]);
+    const [settings, setSettings] = useState<PlatformSettings | null>(null);
 
     useEffect(() => {
         try {
             const storedReports = localStorage.getItem('foundtastic-all-reports');
             setReports(storedReports ? JSON.parse(storedReports) : mockReports);
             const storedUsers = localStorage.getItem('foundtastic-all-users');
-            // This is a simplification; in a real app, reports would have a userId
             setUsers(storedUsers ? JSON.parse(storedUsers) : mockUsers);
+            const storedSettings = localStorage.getItem('foundtastic-settings');
+            if (storedSettings) {
+                setSettings(JSON.parse(storedSettings));
+            }
         } catch (error) {
             console.error("Failed to load data from localStorage", error);
         }
@@ -37,8 +38,12 @@ const FraudDetection: React.FC = () => {
     const suspiciousReports = useMemo((): SuspiciousReport[] => {
         if (!reports.length || !users.length) return [];
 
+        const highValueKeywords = settings?.highValueKeywords
+            ? settings.highValueKeywords.split(',').map(k => k.trim().toLowerCase())
+            : ['iphone', 'laptop', 'camera', 'jewelry', 'macbook', 'dslr', 'drone'];
+        const shortDescThreshold = 50;
+        
         const reportCountsByUser: { [email: string]: number } = {};
-        // This is a workaround as reports don't have user IDs. We'll assign them cyclically.
         reports.forEach((_, index) => {
             const user = users[index % users.length];
             if (user) {
@@ -53,8 +58,8 @@ const FraudDetection: React.FC = () => {
             if (!reporter) return;
 
             // Rule 1: High-value item with a short description
-            const isHighValue = HIGH_VALUE_KEYWORDS.some(keyword => report.item.toLowerCase().includes(keyword));
-            if (isHighValue && report.description.length < SHORT_DESC_THRESHOLD) {
+            const isHighValue = highValueKeywords.some(keyword => report.item.toLowerCase().includes(keyword));
+            if (isHighValue && report.description.length < shortDescThreshold) {
                 flaggedReports[report.id] = {
                     ...report,
                     reporterName: reporter.name,
@@ -75,7 +80,7 @@ const FraudDetection: React.FC = () => {
         });
 
         return Object.values(flaggedReports);
-    }, [reports, users, t]);
+    }, [reports, users, t, settings]);
 
     return (
         <div className="flex min-h-screen bg-gray-50">
