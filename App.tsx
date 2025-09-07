@@ -47,11 +47,12 @@ const AppContent: React.FC = () => {
         }
     }, []);
     
-    const isAdminOrAuthorityRoute = location.pathname.startsWith('/admin') || location.pathname.startsWith('/authority');
+    const isDashboardRoute = location.pathname.startsWith('/admin') || location.pathname.startsWith('/authority') || location.pathname.startsWith('/volunteer');
+    const isHomePage = location.pathname === '/';
 
     return (
-        <div className="flex flex-col min-h-screen">
-            {!isAdminOrAuthorityRoute && <Header />}
+        <div className={`flex flex-col min-h-screen ${isHomePage ? 'bg-brand-bg' : ''}`}>
+            {!isDashboardRoute && <Header />}
             <main className="flex-grow">
                 <Routes>
                     <Route path="/" element={<HomePage />} />
@@ -80,7 +81,7 @@ const AppContent: React.FC = () => {
                     <Route path="/volunteer" element={<ProtectedRoute role="volunteer"><VolunteerDashboard /></ProtectedRoute>} />
                 </Routes>
             </main>
-            {!isAdminOrAuthorityRoute && <Footer />}
+            {!isDashboardRoute && <Footer />}
             {showLanguagePopup && <LanguageSelectorPopup onClose={() => setShowLanguagePopup(false)} />}
         </div>
     );

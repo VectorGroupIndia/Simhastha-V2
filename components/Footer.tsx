@@ -33,7 +33,7 @@ const Footer: React.FC = () => {
   const { t } = useLanguage();
 
   return (
-    <footer className="bg-brand-dark text-white">
+    <footer className="bg-transparent text-white">
       <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="flex flex-col items-center text-center space-y-6">
           

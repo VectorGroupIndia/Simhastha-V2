@@ -14,9 +14,24 @@
               'brand-secondary': '#ea580c',
               'brand-light': '#eff6ff',
               'brand-dark': '#1e293b',
+              'brand-bg': '#0f172a'
             },
             fontFamily: {
               sans: ['Inter', 'sans-serif'],
+            },
+            keyframes: {
+              float: {
+                '0%, 100%': { transform: 'translateY(0px)' },
+                '50%': { transform: 'translateY(-20px)' },
+              },
+               float2: {
+                '0%, 100%': { transform: 'translateY(-10px)' },
+                '50%': { transform: 'translateY(10px)' },
+              },
+            },
+            animation: {
+              float: 'float 6s ease-in-out infinite',
+              float2: 'float2 8s ease-in-out infinite',
             },
           },
         },
