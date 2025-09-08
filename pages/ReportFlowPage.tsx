@@ -15,22 +15,30 @@ import { Report } from './ProfilePage';
 import { findMatchingReports, getTagsFromText, translateToEnglish } from '../services/gemini';
 
 export interface ReportData {
+    reportCategory: 'item' | 'person';
     reportType: 'lost' | 'found';
+    // Item fields
     category: string;
     subcategory: string;
-    itemName: string;
+    itemName: string; // Used for person's name as well
     description: string;
     brand: string;
     color: string;
     material: string;
     identifyingMarks: string;
-    location: string;
     serialNumber: string;
-    city: string;
     tags: string;
+    // Person fields
+    age: string;
+    gender: 'Male' | 'Female' | 'Other' | '';
+    lastSeenWearing: string;
+    // Common fields
+    location: string;
+    city: string;
     images: File[];
     imagePreviews: string[];
 }
+
 
 type Step = 'auth' | 'instructions' | 'form' | 'confirmation' | 'success';
 
@@ -49,6 +57,7 @@ const ReportFlowPage: React.FC = () => {
 
     const [step, setStep] = useState<Step>(user ? 'instructions' : 'auth');
     const [reportData, setReportData] = useState<ReportData>({
+        reportCategory: 'item',
         reportType: 'lost',
         category: '',
         subcategory: '',
@@ -64,6 +73,9 @@ const ReportFlowPage: React.FC = () => {
         tags: '',
         images: [],
         imagePreviews: [],
+        age: '',
+        gender: '',
+        lastSeenWearing: '',
     });
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [matchIds, setMatchIds] = useState<string[]>([]);
@@ -120,21 +132,20 @@ const ReportFlowPage: React.FC = () => {
             // 1. Prepare data for processing (all in English)
             let processedData = { ...reportData };
             if (language !== 'English') {
-                const [itemName, description, brand, color, material, identifyingMarks, location, tags] = await Promise.all([
-                    translateToEnglish(reportData.itemName, language),
-                    translateToEnglish(reportData.description, language),
-                    translateToEnglish(reportData.brand, language),
-                    translateToEnglish(reportData.color, language),
-                    translateToEnglish(reportData.material, language),
-                    translateToEnglish(reportData.identifyingMarks, language),
-                    translateToEnglish(reportData.location, language),
-                    translateToEnglish(reportData.tags, language),
-                ]);
-                processedData = { ...processedData, itemName, description, brand, color, material, identifyingMarks, location, tags };
+                const fieldsToTranslate = [
+                    reportData.itemName, reportData.description, reportData.brand, reportData.color,
+                    reportData.material, reportData.identifyingMarks, reportData.location, reportData.tags,
+                    reportData.lastSeenWearing
+                ];
+                const [
+                    itemName, description, brand, color, material, identifyingMarks, location, tags, lastSeenWearing
+                ] = await Promise.all(fieldsToTranslate.map(field => translateToEnglish(field, language)));
+                
+                processedData = { ...processedData, itemName, description, brand, color, material, identifyingMarks, location, tags, lastSeenWearing };
             }
 
-            // 2. AI Text Analysis for tags
-            if (processedData.description) {
+            // 2. AI Text Analysis for tags (only for items)
+            if (processedData.reportCategory === 'item' && processedData.description) {
                 const aiTags = await getTagsFromText(processedData.description);
                 const userTags = processedData.tags ? processedData.tags.split(',').map(t => t.trim()).filter(Boolean) : [];
                 const combinedTags = [...new Set([...userTags, ...aiTags])];
@@ -145,43 +156,49 @@ const ReportFlowPage: React.FC = () => {
             const newReport: Report = {
                 id: `rep-${Date.now()}`,
                 reporterId: user.id,
-                reportCategory: 'item',
+                reportCategory: processedData.reportCategory,
                 type: processedData.reportType,
                 item: processedData.itemName,
-                description: processedData.description,
+                description: processedData.reportCategory === 'person' ? `Last seen wearing: ${processedData.lastSeenWearing}. Additional details: ${processedData.description}` : processedData.description,
                 date: new Date().toISOString().split('T')[0],
                 status: 'pending',
                 location: `${processedData.location}, ${processedData.city}`,
                 imageUrls: processedData.imagePreviews,
                 matches: [],
+                age: processedData.age ? parseInt(processedData.age, 10) : undefined,
+                gender: processedData.gender || undefined,
             };
 
-            // 4. Find matches
-            const allReportsStr = localStorage.getItem('foundtastic-all-reports');
-            let allReports: Report[] = allReportsStr ? JSON.parse(allReportsStr) : [];
-            const candidateType = newReport.type === 'lost' ? 'found' : 'lost';
-            const candidates = allReports.filter(r => r.type === candidateType);
+            // 4. Find matches (only for items)
+            if (newReport.reportCategory === 'item') {
+                const allReportsStr = localStorage.getItem('foundtastic-all-reports');
+                let allReports: Report[] = allReportsStr ? JSON.parse(allReportsStr) : [];
+                const candidateType = newReport.type === 'lost' ? 'found' : 'lost';
+                const candidates = allReports.filter(r => r.type === candidateType && r.reportCategory === 'item');
 
-            if (candidates.length > 0) {
-                const matchedReportIds = await findMatchingReports(newReport, candidates);
-                
-                if (matchedReportIds.length > 0) {
-                    newReport.matches = matchedReportIds;
-                    setMatchIds(matchedReportIds);
+                if (candidates.length > 0) {
+                    const matchedReportIds = await findMatchingReports(newReport, candidates);
+                    
+                    if (matchedReportIds.length > 0) {
+                        newReport.matches = matchedReportIds;
+                        setMatchIds(matchedReportIds);
 
-                    allReports = allReports.map(report => {
-                        if (matchedReportIds.includes(report.id)) {
-                            return {
-                                ...report,
-                                matches: [...(report.matches || []), newReport.id]
-                            };
-                        }
-                        return report;
-                    });
+                        allReports = allReports.map(report => {
+                            if (matchedReportIds.includes(report.id)) {
+                                return {
+                                    ...report,
+                                    matches: [...(report.matches || []), newReport.id]
+                                };
+                            }
+                            return report;
+                        });
+                    }
                 }
             }
             
             // 5. Save and Notify
+            const allReportsStr = localStorage.getItem('foundtastic-all-reports');
+            let allReports: Report[] = allReportsStr ? JSON.parse(allReportsStr) : [];
             const updatedReports = [...allReports, newReport];
             localStorage.setItem('foundtastic-all-reports', JSON.stringify(updatedReports));
             
@@ -210,6 +227,7 @@ const ReportFlowPage: React.FC = () => {
     
     const handleFileAnother = () => {
         setReportData({
+            reportCategory: 'item',
             reportType: 'lost',
             category: '',
             subcategory: '',
@@ -225,6 +243,9 @@ const ReportFlowPage: React.FC = () => {
             tags: '',
             images: [],
             imagePreviews: [],
+            age: '',
+            gender: '',
+            lastSeenWearing: '',
         });
         setMatchIds([]);
         setStep('instructions');

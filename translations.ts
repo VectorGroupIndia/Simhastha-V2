@@ -263,6 +263,12 @@ export const uiStrings = {
     translatingButton: "Translating...",
     confirmHeading: "Please confirm your report details",
     confirmImage: "Item Image",
+    // FIX: Add missing translation keys for person reports
+    confirmPersonPhoto: "Person's Photo",
+    confirmPersonName: "Person's Name",
+    confirmPersonAge: "Age (approx.)",
+    confirmPersonGender: "Gender",
+    confirmLastSeenWearing: "Last Seen Wearing",
     confirmNoImage: "No image provided",
     confirmReportType: "Report Type",
     confirmReportTypeLost: "Lost Item",
@@ -275,6 +281,8 @@ export const uiStrings = {
     confirmSubmitButton: "Confirm & Submit Report",
     submittingAndMatching: "Submitting & Matching...",
     successMessage: "Your report for '{itemName}' has been successfully filed!",
+    // FIX: Add missing translation key for person reports
+    successMessagePerson: "Your report for '{personName}' has been successfully filed! Authorities have been alerted.",
     matchSuccessTitle: "Potential Matches Found!",
     matchSuccessBody: "Our AI found {count} potential match(es) for your item! You can view them in your profile.",
     viewMatchesButton: "View Matches in My Profile",
@@ -283,6 +291,12 @@ export const uiStrings = {
       "You will receive updates on your registered mobile number and email.",
       "You can track the status of your report in the 'My Profile' section.",
       "If you lost a mobile phone, please also report it on the Central Equipment Identity Register (CEIR) portal.",
+    ],
+    // FIX: Add missing translation key for person reports
+    successNoteListPerson: [
+      "You will receive updates on your registered mobile number and email.",
+      "You can track the status of your report in the 'My Profile' section.",
+      "Authorities have been alerted. Please visit the nearest help desk for further assistance.",
     ],
     successDisclaimerTitle: "Disclaimer",
     successDisclaimerList: [

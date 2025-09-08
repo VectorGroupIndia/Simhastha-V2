@@ -63,16 +63,12 @@ const Header: React.FC = () => {
               </button>
             </div>
             <div className="hidden lg:flex lg:gap-x-2">
-              {!isPrivilegedRole && (
-                <>
-                  <NavLink to="/" className={navLinkClass}>{t.navHome}</NavLink>
-                  <NavLink to="/about" className={navLinkClass}>{t.navAbout}</NavLink>
-                  <NavLink to="/contact" className={navLinkClass}>{t.navContact}</NavLink>
-                  <NavLink to="/faq" className={navLinkClass}>{t.navFaq}</NavLink>
-                  <NavLink to="/report" className={navLinkClass}>{t.navReport}</NavLink>
-                  {user && <NavLink to="/my-group" className={navLinkClass}>{t.navMyGroup}</NavLink>}
-                </>
-              )}
+              <NavLink to="/" className={navLinkClass}>{t.navHome}</NavLink>
+              <NavLink to="/about" className={navLinkClass}>{t.navAbout}</NavLink>
+              <NavLink to="/contact" className={navLinkClass}>{t.navContact}</NavLink>
+              <NavLink to="/faq" className={navLinkClass}>{t.navFaq}</NavLink>
+              <NavLink to="/report" className={navLinkClass}>{t.navReport}</NavLink>
+              {user && <NavLink to="/my-group" className={navLinkClass}>{t.navMyGroup}</NavLink>}
               {user && (
                    <button onClick={() => setIsMapModalOpen(true)} className={navLinkClass({isActive: false})}>Live Map</button>
               )}
@@ -134,17 +130,13 @@ const Header: React.FC = () => {
             <div className="mt-6 flow-root">
               <div className="-my-6 divide-y divide-slate-500/10">
                 <div className="space-y-2 py-6">
-                  {!isPrivilegedRole && (
-                    <>
-                      <NavLink to="/" onClick={() => setIsMenuOpen(false)} className="-mx-3 block rounded-lg px-3 py-2 text-base font-semibold leading-7 text-slate-200 hover:bg-white/10">{t.navHome}</NavLink>
-                      <NavLink to="/about" onClick={() => setIsMenuOpen(false)} className="-mx-3 block rounded-lg px-3 py-2 text-base font-semibold leading-7 text-slate-200 hover:bg-white/10">{t.navAbout}</NavLink>
-                      <NavLink to="/contact" onClick={() => setIsMenuOpen(false)} className="-mx-3 block rounded-lg px-3 py-2 text-base font-semibold leading-7 text-slate-200 hover:bg-white/10">{t.navContact}</NavLink>
-                      <NavLink to="/faq" onClick={() => setIsMenuOpen(false)} className="-mx-3 block rounded-lg px-3 py-2 text-base font-semibold leading-7 text-slate-200 hover:bg-white/10">{t.navFaq}</NavLink>
-                      <NavLink to="/report" onClick={() => setIsMenuOpen(false)} className="-mx-3 block rounded-lg px-3 py-2 text-base font-semibold leading-7 text-slate-200 hover:bg-white/10">{t.navReport}</NavLink>
-                      {user && (
-                        <NavLink to="/my-group" onClick={() => setIsMenuOpen(false)} className="-mx-3 block rounded-lg px-3 py-2 text-base font-semibold leading-7 text-slate-200 hover:bg-white/10">{t.navMyGroup}</NavLink>
-                      )}
-                    </>
+                  <NavLink to="/" onClick={() => setIsMenuOpen(false)} className="-mx-3 block rounded-lg px-3 py-2 text-base font-semibold leading-7 text-slate-200 hover:bg-white/10">{t.navHome}</NavLink>
+                  <NavLink to="/about" onClick={() => setIsMenuOpen(false)} className="-mx-3 block rounded-lg px-3 py-2 text-base font-semibold leading-7 text-slate-200 hover:bg-white/10">{t.navAbout}</NavLink>
+                  <NavLink to="/contact" onClick={() => setIsMenuOpen(false)} className="-mx-3 block rounded-lg px-3 py-2 text-base font-semibold leading-7 text-slate-200 hover:bg-white/10">{t.navContact}</NavLink>
+                  <NavLink to="/faq" onClick={() => setIsMenuOpen(false)} className="-mx-3 block rounded-lg px-3 py-2 text-base font-semibold leading-7 text-slate-200 hover:bg-white/10">{t.navFaq}</NavLink>
+                  <NavLink to="/report" onClick={() => setIsMenuOpen(false)} className="-mx-3 block rounded-lg px-3 py-2 text-base font-semibold leading-7 text-slate-200 hover:bg-white/10">{t.navReport}</NavLink>
+                  {user && (
+                    <NavLink to="/my-group" onClick={() => setIsMenuOpen(false)} className="-mx-3 block rounded-lg px-3 py-2 text-base font-semibold leading-7 text-slate-200 hover:bg-white/10">{t.navMyGroup}</NavLink>
                   )}
                    {user && (
                       <button onClick={() => { setIsMapModalOpen(true); setIsMenuOpen(false); }} className="-mx-3 block rounded-lg px-3 py-2 text-base font-semibold leading-7 text-slate-200 hover:bg-white/10 w-full text-left">Live Map</button>

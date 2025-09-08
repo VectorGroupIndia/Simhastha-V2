@@ -23,6 +23,7 @@ const DetailRow: React.FC<{ label: string; value?: string | null }> = ({ label, 
 
 const ConfirmationStep: React.FC<ConfirmationStepProps> = ({ data, onConfirm, onBack, isSubmitting }) => {
     const { t } = useLanguage();
+    const isPersonReport = data.reportCategory === 'person';
 
     return (
         <div className="space-y-8">
@@ -30,7 +31,7 @@ const ConfirmationStep: React.FC<ConfirmationStepProps> = ({ data, onConfirm, on
                 <h3 className="text-xl font-bold text-brand-dark mb-4 border-b pb-2">{t.confirmHeading}</h3>
                 <div className="sm:divide-y sm:divide-slate-200">
                     <div className="py-3 sm:grid sm:grid-cols-3 sm:gap-4">
-                         <dt className="text-sm font-medium text-slate-600">{t.confirmImage}</dt>
+                         <dt className="text-sm font-medium text-slate-600">{isPersonReport ? t.confirmPersonPhoto : t.confirmImage}</dt>
                          <dd className="mt-1 sm:mt-0 sm:col-span-2">
                              {data.imagePreviews.length > 0 ? (
                                 <div className="flex flex-wrap gap-2">
@@ -45,16 +46,29 @@ const ConfirmationStep: React.FC<ConfirmationStepProps> = ({ data, onConfirm, on
                     </div>
 
                     <DetailRow label={t.confirmReportType} value={data.reportType === 'lost' ? t.confirmReportTypeLost : t.confirmReportTypeFound} />
-                    <DetailRow label={t.itemName} value={data.itemName} />
-                    <DetailRow label={t.confirmCategory} value={`${data.category} - ${data.subcategory}`} />
-                    <DetailRow label={t.description} value={data.description} />
-                    <DetailRow label={t.brand} value={data.brand} />
-                    <DetailRow label={t.color} value={data.color} />
-                    <DetailRow label={t.material} value={data.material} />
-                    <DetailRow label={t.identifyingMarks} value={data.identifyingMarks} />
+                    <DetailRow label={isPersonReport ? t.confirmPersonName : t.itemName} value={data.itemName} />
+                    
+                    {isPersonReport ? (
+                        <>
+                            <DetailRow label={t.confirmPersonAge} value={data.age} />
+                            <DetailRow label={t.confirmPersonGender} value={data.gender} />
+                            <DetailRow label={t.confirmLastSeenWearing} value={data.lastSeenWearing} />
+                            <DetailRow label={t.description} value={data.description} />
+                        </>
+                    ) : (
+                         <>
+                            <DetailRow label={t.confirmCategory} value={`${data.category} - ${data.subcategory}`} />
+                            <DetailRow label={t.description} value={data.description} />
+                            <DetailRow label={t.brand} value={data.brand} />
+                            <DetailRow label={t.color} value={data.color} />
+                            <DetailRow label={t.material} value={data.material} />
+                            <DetailRow label={t.identifyingMarks} value={data.identifyingMarks} />
+                            <DetailRow label={t.confirmSerialNumber} value={data.serialNumber} />
+                            <DetailRow label={t.confirmTags} value={data.tags} />
+                        </>
+                    )}
+                    
                     <DetailRow label={t.confirmLocation} value={`${data.location}, ${data.city}`} />
-                    <DetailRow label={t.confirmSerialNumber} value={data.serialNumber} />
-                    <DetailRow label={t.confirmTags} value={data.tags} />
                 </div>
             </div>
 

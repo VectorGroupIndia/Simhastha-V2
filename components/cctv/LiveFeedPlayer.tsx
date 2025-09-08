@@ -106,7 +106,6 @@ const LiveFeedPlayer: React.FC<LiveFeedPlayerProps> = ({ report, onNewSighting, 
             const frameDataUrl = canvas.toDataURL('image/jpeg');
             
             try {
-                // FIX: Changed report.imageUrl to report.imageUrls[0]
                 const personImage = await fileToBase64(report.imageUrls[0]);
                 const frameImage = { mimeType: 'image/jpeg', data: frameDataUrl.split(',')[1] };
                 
@@ -114,7 +113,6 @@ const LiveFeedPlayer: React.FC<LiveFeedPlayerProps> = ({ report, onNewSighting, 
                 
                 if (result.match) {
                     setAiStatus('match_found');
-                    // FIX: Added missing status and confirmedBy properties to the new sighting object to match the expected type.
                     onNewSighting({
                         reportId: report.id,
                         timestamp: new Date(),

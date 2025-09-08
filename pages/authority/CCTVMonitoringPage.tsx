@@ -38,7 +38,6 @@ const CCTVMonitoringPage: React.FC = () => {
         try {
             const storedSightings = localStorage.getItem('foundtastic-sightings');
             if (storedSightings) {
-// FIX: The type `s: Sighting` was an incorrect assertion, as `JSON.parse` returns objects with string timestamps, not Date objects. Changed to `s: any` for correct type handling.
                 const parsed = JSON.parse(storedSightings).map((s: any) => ({...s, timestamp: new Date(s.timestamp)}));
                 setSightings(parsed);
             } else {

@@ -85,10 +85,6 @@ export const mockVolunteerTasks: VolunteerTask[] = [
     { id: 'task5', title: 'Distribute Water Bottles', description: 'Distribute water bottles to pilgrims in the queue near Harsiddhi Temple.', location: 'Harsiddhi Temple', status: 'pending', priority: 'medium', dueDate: '2024-07-29' }
 ];
 
-// @ts-ignore
-// FIX: The original type definition for mockSightings was missing parentheses, causing TypeScript to misinterpret it.
-// It was parsed as `(Omit<...>) & ({...}[])` instead of the intended array type `(...)[]`.
-// Adding parentheses corrects the type to be an array of sighting objects with string timestamps.
 export const mockSightings: (Omit<Sighting, 'timestamp'> & { timestamp: string })[] = [
     { id: 'sight1', reportId: 'rep-p1', timestamp: '2024-07-26T10:15:00Z', cameraLocation: 'CAM 04 - Ram Ghat', snapshotUrl: 'https://images.unsplash.com/photo-1610652886675-9278385e0542?q=80&w=400', confidence: 0.91, status: 'confirmed', confirmedBy: 'Priya Singh' },
     { id: 'sight2', reportId: 'rep-p1', timestamp: '2024-07-26T09:45:00Z', cameraLocation: 'CAM 02 - Mahakal Exit', snapshotUrl: 'https://images.unsplash.com/photo-1580252183389-9b6f3549e548?q=80&w=400', confidence: 0.82, status: 'unconfirmed', confirmedBy: null },

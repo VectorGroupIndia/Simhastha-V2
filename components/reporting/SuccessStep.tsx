@@ -16,6 +16,7 @@ interface SuccessStepProps {
 const SuccessStep: React.FC<SuccessStepProps> = ({ onFileAnother, reportData, matchIds }) => {
     const { t } = useLanguage();
     const navigate = useNavigate();
+    const isPersonReport = reportData.reportCategory === 'person';
 
      const handleDownloadPdf = () => {
         const doc = new jspdf.jsPDF();
@@ -24,27 +25,37 @@ const SuccessStep: React.FC<SuccessStepProps> = ({ onFileAnother, reportData, ma
         doc.setFontSize(20);
         doc.text("Foundtastic - Report Summary", 14, 22);
         doc.setFontSize(12);
-        doc.text(`Report Type: ${report.reportType === 'lost' ? 'Lost Item' : 'Found Item'}`, 14, 32);
+        doc.text(`Report Type: ${report.reportType === 'lost' ? 'Lost Person/Item' : 'Found Item'}`, 14, 32);
 
         const locationLabel = report.reportType === 'lost' ? 'Last Seen Location' : 'Found Location';
+        const nameLabel = isPersonReport ? 'Person Name' : 'Item Name';
+        
         const tableColumn = ["Detail", "Information"];
         const tableRows = [
-            ["Item Name", report.itemName],
-            ["Category", `${report.category} - ${report.subcategory}`],
-            ["Description", report.description],
+            [nameLabel, report.itemName],
             [locationLabel, `${report.location}, ${report.city}`],
         ];
 
-        if (report.brand) tableRows.push(["Brand", report.brand]);
-        if (report.color) tableRows.push(["Color", report.color]);
-        if (report.material) tableRows.push(["Material", report.material]);
-        if (report.identifyingMarks) tableRows.push(["Identifying Marks", report.identifyingMarks]);
-        if (report.serialNumber) tableRows.push(["Serial/Document Number", report.serialNumber]);
-        if (report.tags) tableRows.push(["Tags / Keywords", report.tags]);
+        if(isPersonReport) {
+            tableRows.push(['Age', report.age]);
+            tableRows.push(['Gender', report.gender]);
+            tableRows.push(['Last Seen Wearing', report.lastSeenWearing]);
+            tableRows.push(['Additional Details', report.description]);
+        } else {
+             tableRows.push(["Category", `${report.category} - ${report.subcategory}`]);
+             tableRows.push(["Description", report.description]);
+             if (report.brand) tableRows.push(["Brand", report.brand]);
+             if (report.color) tableRows.push(["Color", report.color]);
+             if (report.material) tableRows.push(["Material", report.material]);
+             if (report.identifyingMarks) tableRows.push(["Identifying Marks", report.identifyingMarks]);
+             if (report.serialNumber) tableRows.push(["Serial/Document Number", report.serialNumber]);
+             if (report.tags) tableRows.push(["Tags / Keywords", report.tags]);
+        }
+
 
         let startY = 40;
         if (report.imagePreviews && report.imagePreviews.length > 0) {
-            doc.text("Images", 14, startY);
+            doc.text(isPersonReport ? "Photos" : "Images", 14, startY);
             startY += 8;
             report.imagePreviews.forEach(imgData => {
                 try {
@@ -101,10 +112,13 @@ const SuccessStep: React.FC<SuccessStepProps> = ({ onFileAnother, reportData, ma
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
             <p className="text-lg text-slate-700">
-                {t.successMessage.replace('{itemName}', reportData.itemName)}
+                {isPersonReport 
+                    ? t.successMessagePerson.replace('{personName}', reportData.itemName)
+                    : t.successMessage.replace('{itemName}', reportData.itemName)
+                }
             </p>
 
-            {matchIds.length > 0 && (
+            {!isPersonReport && matchIds.length > 0 && (
                 <div className="p-4 bg-green-50 border-l-4 border-green-400 text-left">
                     <h3 className="text-md font-semibold text-green-800">{t.matchSuccessTitle}</h3>
                     <p className="text-sm text-green-700 mt-2">
@@ -122,11 +136,14 @@ const SuccessStep: React.FC<SuccessStepProps> = ({ onFileAnother, reportData, ma
             <div className="p-4 bg-blue-50 border-l-4 border-blue-400 text-left space-y-4">
                 <h3 className="text-md font-semibold text-blue-800">{t.successNoteTitle}</h3>
                 <ul className="list-disc list-inside space-y-2 text-sm text-blue-700 pl-4">
-                    {t.successNoteList.map((note, index) => {
-                        const ceirLink = '<a href="https://www.ceir.gov.in/Home/index.jsp" target="_blank" rel="noopener noreferrer" class="font-semibold underline hover:text-blue-900">Central Equipment Identity Register (CEIR)</a>';
-                        const finalNote = note.includes('CEIR') ? note.replace('Central Equipment Identity Register (CEIR)', ceirLink) : note;
-                        return <li key={index} dangerouslySetInnerHTML={{ __html: finalNote }}></li>
-                    })}
+                     {isPersonReport 
+                        ? t.successNoteListPerson.map((note, index) => <li key={index}>{note}</li>)
+                        : t.successNoteList.map((note, index) => {
+                            const ceirLink = '<a href="https://www.ceir.gov.in/Home/index.jsp" target="_blank" rel="noopener noreferrer" class="font-semibold underline hover:text-blue-900">Central Equipment Identity Register (CEIR)</a>';
+                            const finalNote = note.includes('CEIR') ? note.replace('Central Equipment Identity Register (CEIR)', ceirLink) : note;
+                            return <li key={index} dangerouslySetInnerHTML={{ __html: finalNote }}></li>
+                        })
+                     }
                 </ul>
             </div>
             

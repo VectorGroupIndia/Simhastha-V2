@@ -1,5 +1,6 @@
 
 
+
 import React, { useState, useEffect } from 'react';
 import { ReportData } from '../../pages/ReportFlowPage';
 import { analyzeItemImage, translateFromEnglish } from '../../services/gemini';
@@ -43,7 +44,9 @@ const baseLoadingMessages = ["Analyzing image...", "Identifying key features..."
 
 const ReportFormStep: React.FC<ReportFormStepProps> = ({ onSubmit, initialData }) => {
     const { language, t } = useLanguage();
+    // FIX: Initialize formData with all required fields from ReportData to satisfy TypeScript.
     const [formData, setFormData] = useState<ReportData>({
+        reportCategory: 'item',
         reportType: 'lost',
         category: '',
         subcategory: '',
@@ -59,6 +62,9 @@ const ReportFormStep: React.FC<ReportFormStepProps> = ({ onSubmit, initialData }
         tags: '',
         images: [],
         imagePreviews: [],
+        age: '',
+        gender: '',
+        lastSeenWearing: '',
         ...initialData,
     });
     
@@ -154,7 +160,20 @@ const ReportFormStep: React.FC<ReportFormStepProps> = ({ onSubmit, initialData }
             const base64Promises = formData.images.map(file => fileToBase64(file));
             const base64Images = await Promise.all(base64Promises);
             
-            const analysisResult = await analyzeItemImage(base64Images);
+            // FIX: The analyzeItemImage function returns an array of results.
+            const analysisResults = await analyzeItemImage(base64Images);
+            
+            // Handle case where no items are found
+            if (!analysisResults || analysisResults.length === 0) {
+                setAnalysisError("No distinct items could be identified in the image. Please fill the form manually.");
+                setAnalysisSuccess(false);
+                setIsAnalyzing(false);
+                return;
+            }
+
+            // For this form, we'll use the first item identified by the AI.
+            // A more complex UI could let the user choose if multiple items are found.
+            const analysisResult = analysisResults[0];
             
             let finalData = { ...analysisResult };
 

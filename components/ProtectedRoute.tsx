@@ -8,7 +8,6 @@ import { useLanguage } from '../contexts/LanguageContext';
 
 interface ProtectedRouteProps {
   children: JSX.Element;
-  // FIX: Added 'user' to the list of allowed roles to fix a type error where `role="user"` was being used in App.tsx.
   role?: 'user' | 'admin' | 'authority' | 'volunteer';
 }
 

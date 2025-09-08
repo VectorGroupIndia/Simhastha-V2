@@ -34,7 +34,6 @@ const SuggestedMatches: React.FC<SuggestedMatchesProps> = ({ matchIds, currentRe
             <div className="space-y-4">
                 {matchedReports.map(report => (
                     <div key={report.id} className="p-4 border rounded-lg bg-slate-50 flex items-start space-x-4">
-                        {/* FIX: Changed report.imageUrl to report.imageUrls[0] */}
                         <img src={report.imageUrls[0]} alt={report.item} className="w-20 h-20 object-cover rounded-md bg-slate-100 flex-shrink-0" />
                         <div className="flex-grow">
                             <span className={`text-xs font-bold uppercase ${report.type === 'lost' ? 'text-red-600' : 'text-green-600'}`}>

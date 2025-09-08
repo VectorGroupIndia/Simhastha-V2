@@ -27,7 +27,6 @@ const MissingPersonSelector: React.FC<MissingPersonSelectorProps> = ({ reports, 
                             }`}
                         >
                             <img
-                                // FIX: Changed report.imageUrl to report.imageUrls[0]
                                 src={report.imageUrls[0]}
                                 alt={report.item}
                                 className="w-16 h-16 object-cover rounded-full border-2 border-white flex-shrink-0"

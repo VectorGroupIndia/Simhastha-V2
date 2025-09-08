@@ -1,6 +1,6 @@
 
 
-import { GoogleGenAI, Type } from "@google/genai";
+import { GoogleGenAI, Type, Modality } from "@google/genai";
 import { ItemCategory } from "../types";
 import { CATEGORIES } from "../constants";
 import { Report } from "../pages/ProfilePage";
@@ -25,19 +25,47 @@ export interface GeminiAnalysisResult {
 // This is a mock function for development when an API key isn't available.
 const analyzeItemImageMock = (
   _base64Images: { mimeType: string; data: string }[]
-): Promise<GeminiAnalysisResult> => {
+): Promise<GeminiAnalysisResult[]> => {
   return new Promise((resolve) => {
     setTimeout(() => {
-      resolve({
-        title: "Mock: Black Headphones",
-        description: "A pair of over-ear black headphones, likely for listening to music. They appear to be in good condition. Mocked response based on multiple images.",
-        category: "Electronics",
-        subcategory: "Headphones",
-        brand: "Sony",
-        color: "Black",
-        material: "Plastic",
-        identifyingMarks: "Small scratch on the right earcup.",
-      });
+        // To test the multi-item feature, we'll sometimes return two items.
+        if (Math.random() > 0.5) {
+             resolve([
+                {
+                    title: "Mock: Black Headphones",
+                    description: "A pair of over-ear black headphones, likely for listening to music. They appear to be in good condition.",
+                    category: "Electronics",
+                    subcategory: "Headphones",
+                    brand: "Sony",
+                    color: "Black",
+                    material: "Plastic",
+                    identifyingMarks: "Small scratch on the right earcup.",
+                },
+             ]);
+        } else {
+            resolve([
+                {
+                    title: "Mock: Brown Leather Wallet",
+                    description: "A standard bifold leather wallet, brown in color. Appears to have some cards inside.",
+                    category: "Documents",
+                    subcategory: "Wallet",
+                    brand: "Fossil",
+                    color: "Brown",
+                    material: "Leather",
+                    identifyingMarks: "Slight wear on the corners.",
+                },
+                {
+                    title: "Mock: Blue Backpack",
+                    description: "A simple blue backpack with one main compartment and a front pocket.",
+                    category: "Bags",
+                    subcategory: "Backpack",
+                    brand: "JanSport",
+                    color: "Blue",
+                    material: "Canvas",
+                    identifyingMarks: "A small keychain attached to the zipper.",
+                }
+            ]);
+        }
     }, 1500);
   });
 };
@@ -46,7 +74,7 @@ const analyzeItemImageMock = (
 // This is the primary function that calls the Gemini API.
 const analyzeItemImageLive = async (
   base64Images: { mimeType: string; data: string }[]
-): Promise<GeminiAnalysisResult> => {
+): Promise<GeminiAnalysisResult[]> => {
   try {
     const imageParts = base64Images.map(image => ({
         inlineData: {
@@ -56,15 +84,15 @@ const analyzeItemImageLive = async (
     }));
 
     const textPart = {
-        text: `You are an expert item identifier for a lost and found platform. Analyze the provided images and return a single, minified JSON object with the following structure. Do not include any markdown formatting like \`\`\`json.
+        text: `You are an expert item identifier for a lost and found platform. Analyze the provided images and return a single, minified JSON object with one key: "items", which is an array of objects. Each object represents a distinct reportable item found in the image(s) and should have the following structure. If you identify only one item, the array should contain a single object. If no items are identifiable, return an empty array. Do not include any markdown formatting like \`\`\`json.
 - "title": A concise title (e.g., "Black Leather Wallet", "Silver iPhone 13").
-- "description": A helpful, detailed description of the item, synthesizing details from all images.
+- "description": A helpful, detailed description of the item.
 - "category": The most appropriate category from this exact list: [${CATEGORIES.join(', ')}].
 - "subcategory": A specific subcategory (e.g., "Headphones", "Backpack", "Passport").
 - "brand": The item's brand, if identifiable. If not, use an empty string.
-- "color": The primary color. If not clear, use an empty string.
-- "material": The primary material (e.g., "Leather", "Plastic"). If not clear, use an empty string.
-- "identifyingMarks": Any unique marks like scratches, stickers, or defects. If none, use an empty string.`
+- "color": The primary color.
+- "material": The primary material (e.g., "Leather", "Plastic").
+- "identifyingMarks": Any unique marks like scratches, stickers, or defects.`
     };
 
     const response = await ai.models.generateContent({
@@ -75,39 +103,33 @@ const analyzeItemImageLive = async (
         responseSchema: {
           type: Type.OBJECT,
           properties: {
-            title: {
-              type: Type.STRING,
-              description: "A short, descriptive title for the item (e.g., 'Black Leather Wallet', 'Silver iPhone 13')."
-            },
-            description: {
-              type: Type.STRING,
-              description: "A brief, helpful description of the item, noting any distinguishing features visible in the image."
-            },
-            category: {
-              type: Type.STRING,
-              enum: CATEGORIES as unknown as string[],
-              description: "The most fitting category from the provided list."
-            },
-            subcategory: {
-              type: Type.STRING,
-              description: "A specific subcategory for the item (e.g., 'Headphones', 'Backpack', 'Passport')."
-            },
-            brand: { type: Type.STRING, description: "The brand of the item, if identifiable (e.g., 'Apple', 'Samsonite'). Optional." },
-            color: { type: Type.STRING, description: "The primary color of the item. Optional." },
-            material: { type: Type.STRING, description: "The primary material of the item (e.g., 'Leather', 'Plastic', 'Cotton'). Optional." },
-            identifyingMarks: {
-              type: Type.STRING,
-              description: "Any unique marks like scratches, stickers, or defects visible on the item. Optional."
+            items: {
+              type: Type.ARRAY,
+              description: "An array of all distinct items identified in the image.",
+              items: {
+                type: Type.OBJECT,
+                properties: {
+                  title: { type: Type.STRING, description: "A short, descriptive title for the item." },
+                  description: { type: Type.STRING, description: "A brief, helpful description of the item." },
+                  category: { type: Type.STRING, enum: CATEGORIES as unknown as string[], description: "The most fitting category from the provided list." },
+                  subcategory: { type: Type.STRING, description: "A specific subcategory for the item." },
+                  brand: { type: Type.STRING, description: "The brand of the item, if identifiable." },
+                  color: { type: Type.STRING, description: "The primary color of the item." },
+                  material: { type: Type.STRING, description: "The primary material of the item." },
+                  identifyingMarks: { type: Type.STRING, description: "Any unique marks like scratches or defects." }
+                },
+                required: ["title", "description", "category", "subcategory"],
+              }
             }
           },
-          required: ["title", "description", "category", "subcategory"],
+          required: ["items"]
         }
       }
     });
 
     const jsonText = response.text.trim();
-    const result = JSON.parse(jsonText) as GeminiAnalysisResult;
-    return result;
+    const result = JSON.parse(jsonText) as { items: GeminiAnalysisResult[] };
+    return result.items || [];
 
   } catch (error) {
     console.error("Error analyzing image with Gemini:", error);
@@ -120,14 +142,66 @@ export const analyzeItemImage = process.env.API_KEY
   : analyzeItemImageMock;
 
 
+// --- Face Extraction from Group Photo ---
+
+const extractFacesFromImageMock = async (
+  _base64Image: { mimeType: string; data: string }
+): Promise<string[]> => {
+    return new Promise(resolve => setTimeout(() => resolve([
+        'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=150&h=150&fit=crop',
+        'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150&h=150&fit=crop',
+        'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&h=150&fit=crop'
+    ]), 1500));
+};
+
+export const extractFacesFromImage = async (
+  base64Image: { mimeType: string; data: string }
+): Promise<string[]> => {
+    if (!process.env.API_KEY) {
+        return extractFacesFromImageMock(base64Image);
+    }
+    try {
+        const imagePart = { inlineData: { ...base64Image } };
+        const textPart = { text: "From the user-provided image, please isolate each distinct human face and return it as a separate, tightly cropped image. Return ONLY the cropped face images, with no additional text." };
+        
+        const response = await ai.models.generateContent({
+            model: 'gemini-2.5-flash-image-preview',
+            contents: { parts: [imagePart, textPart] },
+            config: {
+                responseModalities: [Modality.IMAGE],
+            },
+        });
+
+        const faceImages: string[] = [];
+        for (const part of response.candidates[0].content.parts) {
+            if (part.inlineData) {
+                const base64ImageBytes = part.inlineData.data;
+                const imageUrl = `data:${part.inlineData.mimeType};base64,${base64ImageBytes}`;
+                faceImages.push(imageUrl);
+            }
+        }
+        
+        if (faceImages.length === 0) {
+            throw new Error("No faces were detected in the provided image. Please try a clearer photo.");
+        }
+
+        return faceImages;
+    } catch (error) {
+        console.error("Error extracting faces with Gemini:", error);
+        throw new Error("Failed to analyze the photo for faces. Please try another image.");
+    }
+};
+
+
+
 // --- Translation Logic ---
 
 const translateToEnglishMock = async (text: string, _sourceLanguage: string): Promise<string> => {
     if (!text) return "";
     return new Promise(resolve => {
         setTimeout(() => {
-            resolve(`${text} (translated to English)`);
-        }, 500);
+            resolve(`${text}`); // No "(translated)" for smoother UX
+        }, 300);
     });
 };
 
@@ -161,8 +235,8 @@ const translateFromEnglishMock = async (text: string, targetLanguage: string): P
     if (!text) return "";
     return new Promise(resolve => {
         setTimeout(() => {
-            resolve(`${text} (translated to ${targetLanguage})`);
-        }, 500);
+            resolve(`${text}`); // No "(translated)"
+        }, 300);
     });
 };
 
