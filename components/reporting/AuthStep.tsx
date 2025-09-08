@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useLanguage } from '../../contexts/LanguageContext';
@@ -276,9 +277,6 @@ const AuthStep: React.FC<AuthStepProps> = ({ onLoginSuccess }) => {
     
     const demoUsers = [
         mockUsers.find(u => u.role === 'user'),
-        mockUsers.find(u => u.role === 'admin'),
-        mockUsers.find(u => u.role === 'authority'),
-        mockUsers.find(u => u.role === 'volunteer'),
     ].filter(Boolean);
 
     return (

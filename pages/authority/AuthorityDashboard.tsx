@@ -126,7 +126,6 @@ const AuthorityDashboard: React.FC = () => {
     const handleConfirmReportAction = () => {
         if (!reportToAction) return;
         const { report, action } = reportToAction;
-        // FIX: Explicitly typed `newStatus` as `ReportStatus` to fix a type inference issue where the status property of the updated report object was being inferred as a generic `string` instead of the more specific `ReportStatus` type.
         const newStatus: ReportStatus = action === 'verify' ? 'in_review' : 'closed';
         
         const updatedReports = allReports.map(r => r.id === report.id ? { ...r, status: newStatus } : r);

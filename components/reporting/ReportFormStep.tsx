@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { ReportData } from '../../pages/ReportFlowPage';
 import { analyzeItemImage, translateToEnglish, translateFromEnglish } from '../../services/gemini';
@@ -146,19 +147,22 @@ const ReportFormStep: React.FC<ReportFormStepProps> = ({ onSubmit, initialData }
                     translatedDescription,
                     translatedBrand,
                     translatedColor,
-                    translatedMaterial
+                    translatedMaterial,
+                    translatedIdentifyingMarks
                 ] = await Promise.all([
                     translateFromEnglish(analysisResult.title, language),
                     translateFromEnglish(analysisResult.description, language),
                     translateFromEnglish(analysisResult.brand, language),
                     translateFromEnglish(analysisResult.color, language),
                     translateFromEnglish(analysisResult.material, language),
+                    translateFromEnglish(analysisResult.identifyingMarks, language),
                 ]);
                 finalData.title = translatedTitle;
                 finalData.description = translatedDescription;
                 finalData.brand = translatedBrand;
                 finalData.color = translatedColor;
                 finalData.material = translatedMaterial;
+                finalData.identifyingMarks = translatedIdentifyingMarks;
             }
 
             setFormData(prev => ({
@@ -170,6 +174,7 @@ const ReportFormStep: React.FC<ReportFormStepProps> = ({ onSubmit, initialData }
                 brand: finalData.brand || prev.brand,
                 color: finalData.color || prev.color,
                 material: finalData.material || prev.material,
+                identifyingMarks: finalData.identifyingMarks || prev.identifyingMarks,
             }));
             
             setAnalysisSuccess(true);

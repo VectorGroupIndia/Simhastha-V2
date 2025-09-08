@@ -1,5 +1,4 @@
 
-
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useLanguage } from '../contexts/LanguageContext';
@@ -225,7 +224,7 @@ const ReportFlowPage: React.FC = () => {
                         <p className="mt-4 text-lg text-slate-300">{t.reportSubtitle}</p>
                     </div>
                     
-                    <div className="bg-white/10 backdrop-blur-lg rounded-2xl border border-white/20 shadow-2xl p-6 sm:p-10">
+                    <div className="bg-white rounded-2xl shadow-2xl p-6 sm:p-10">
                          {step !== 'success' && (
                              <nav aria-label="Progress" className="mb-12">
                                 <ol role="list" className="space-y-4 md:flex md:space-x-8 md:space-y-0">
@@ -249,7 +248,7 @@ const ReportFlowPage: React.FC = () => {
                                 </ol>
                             </nav>
                         )}
-                         <h2 className="text-2xl font-bold text-white mb-6 text-center">{stepTitles[step]}</h2>
+                         <h2 className="text-2xl font-bold text-brand-dark mb-6 text-center">{stepTitles[step]}</h2>
                         {renderStepContent()}
                     </div>
                 </div>

@@ -128,9 +128,6 @@ const LoginPage: React.FC = () => {
     
     const demoUsers = [
         mockUsers.find(u => u.role === 'user'),
-        mockUsers.find(u => u.role === 'admin'),
-        mockUsers.find(u => u.role === 'authority'),
-        mockUsers.find(u => u.role === 'volunteer'),
     ].filter(Boolean);
 
     return (
@@ -226,11 +223,8 @@ const LoginPage: React.FC = () => {
                             </div>
                         </div>
 
-                        <div className="mt-6 grid grid-cols-2 gap-4">
+                        <div className="mt-6">
                             <button onClick={() => handleQuickLogin('user')} disabled={loading} className="flex w-full items-center justify-center gap-3 rounded-md bg-blue-500/80 px-3 py-2 text-white text-sm font-semibold focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-500 hover:bg-blue-600/80 disabled:opacity-50">{loading ? <Spinner size="sm" /> : t.quickLoginCitizen}</button>
-                            <button onClick={() => handleQuickLogin('admin')} disabled={loading} className="flex w-full items-center justify-center gap-3 rounded-md bg-red-500/80 px-3 py-2 text-white text-sm font-semibold focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-500 hover:bg-red-600/80 disabled:opacity-50">{loading ? <Spinner size="sm" /> : t.quickLoginAdmin}</button>
-                            <button onClick={() => handleQuickLogin('authority')} disabled={loading} className="flex w-full items-center justify-center gap-3 rounded-md bg-purple-500/80 px-3 py-2 text-white text-sm font-semibold focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-purple-500 hover:bg-purple-600/80 disabled:opacity-50">{loading ? <Spinner size="sm" /> : t.quickLoginAuthority}</button>
-                            <button onClick={() => handleQuickLogin('volunteer')} disabled={loading} className="flex w-full items-center justify-center gap-3 rounded-md bg-green-500/80 px-3 py-2 text-white text-sm font-semibold focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-green-500 hover:bg-green-600/80 disabled:opacity-50">{loading ? <Spinner size="sm" /> : t.quickLoginVolunteer}</button>
                         </div>
                     </div>
                 </div>

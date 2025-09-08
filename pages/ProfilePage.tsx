@@ -52,6 +52,23 @@ const ProfilePage: React.FC = () => {
     
     const [activeTab, setActiveTab] = useState<ActiveTab>('reports');
     const [selectedReport, setSelectedReport] = useState<Report | null>(null);
+    const [reports, setReports] = useState<Report[]>([]);
+
+    useEffect(() => {
+        try {
+            const allReportsStr = localStorage.getItem('foundtastic-all-reports');
+            if (allReportsStr) {
+                setReports(JSON.parse(allReportsStr)); 
+            }
+        } catch (e) { console.error("Failed to load reports", e); }
+    }, []);
+
+    const reportSummary = useMemo(() => {
+        const lostCount = reports.filter(r => r.type === 'lost').length;
+        const foundCount = reports.filter(r => r.type === 'found').length;
+        const resolvedCount = reports.filter(r => r.status === 'resolved').length;
+        return { lostCount, foundCount, resolvedCount };
+    }, [reports]);
 
     if (!user) {
         return (
@@ -76,14 +93,30 @@ const ProfilePage: React.FC = () => {
             <div className="container mx-auto px-4 sm:px-6 lg:px-8 z-10">
                 <div className="max-w-4xl mx-auto">
                     {/* User Header */}
-                    <div className="bg-white/10 backdrop-blur-lg p-6 rounded-t-2xl border-x border-t border-white/20 shadow-2xl flex items-center space-x-6">
-                        <div className="w-20 h-20 bg-brand-primary/50 rounded-full flex items-center justify-center text-white text-3xl font-bold">
-                            {user.name.charAt(0)}
+                    <div className="bg-white/10 backdrop-blur-lg p-6 rounded-t-2xl border-x border-t border-white/20 shadow-2xl">
+                        <div className="flex items-center space-x-6">
+                            <div className="w-20 h-20 bg-brand-primary/50 rounded-full flex items-center justify-center text-white text-3xl font-bold">
+                                {user.name.charAt(0)}
+                            </div>
+                            <div>
+                                <h1 className="text-3xl font-bold text-white">{user.name}</h1>
+                                <p className="text-slate-300">{user.email}</p>
+                                <p className="text-slate-400 text-sm mt-1">{t.profileMemberSince} {user.memberSince}</p>
+                            </div>
                         </div>
-                        <div>
-                            <h1 className="text-3xl font-bold text-white">{user.name}</h1>
-                            <p className="text-slate-300">{user.email}</p>
-                            <p className="text-slate-400 text-sm mt-1">{t.profileMemberSince} {user.memberSince}</p>
+                        <div className="mt-6 border-t border-white/20 pt-4 flex justify-around text-center">
+                            <div>
+                                <p className="text-2xl font-bold text-white">{reportSummary.lostCount}</p>
+                                <p className="text-sm text-slate-300">{t.profileFilterLost}</p>
+                            </div>
+                            <div>
+                                <p className="text-2xl font-bold text-white">{reportSummary.foundCount}</p>
+                                <p className="text-sm text-slate-300">{t.profileFilterFound}</p>
+                            </div>
+                            <div>
+                                <p className="text-2xl font-bold text-green-400">{reportSummary.resolvedCount}</p>
+                                <p className="text-sm text-slate-300">{t.status.resolved}</p>
+                            </div>
                         </div>
                     </div>
                     
@@ -96,7 +129,7 @@ const ProfilePage: React.FC = () => {
 
                     {/* Tab Content */}
                     <div className="bg-white/10 backdrop-blur-lg p-6 rounded-b-2xl border-x border-b border-white/20 shadow-2xl">
-                        {activeTab === 'reports' && <ReportsTab onSelectReport={setSelectedReport} />}
+                        {activeTab === 'reports' && <ReportsTab reports={reports} onSelectReport={setSelectedReport} />}
                         {activeTab === 'group' && <GroupTab />}
                         {activeTab === 'settings' && <SettingsTab />}
                     </div>
@@ -108,22 +141,12 @@ const ProfilePage: React.FC = () => {
 };
 
 // --- Reports Tab Component ---
-const ReportsTab: React.FC<{ onSelectReport: (report: Report) => void }> = ({ onSelectReport }) => {
+const ReportsTab: React.FC<{ reports: Report[]; onSelectReport: (report: Report) => void }> = ({ reports, onSelectReport }) => {
     const { t, translateStatus } = useLanguage();
-    const [reports, setReports] = useState<Report[]>([]);
     const [filter, setFilter] = useState<'all' | 'lost' | 'found'>('all');
     const [sortOption, setSortOption] = useState<string>('date_desc');
     const [startDate, setStartDate] = useState('');
     const [endDate, setEndDate] = useState('');
-
-    useEffect(() => {
-        try {
-            const allReportsStr = localStorage.getItem('foundtastic-all-reports');
-            if (allReportsStr) {
-                setReports(JSON.parse(allReportsStr)); 
-            }
-        } catch (e) { console.error("Failed to load reports", e); }
-    }, []);
 
     const processedReports = useMemo(() => {
         let filtered = reports.filter(report => {

@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import Sidebar from './components/Sidebar';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { Report, ReportStatus } from '../ProfilePage';
@@ -16,7 +16,9 @@ const ReportManagement: React.FC = () => {
     const { t } = useLanguage();
     const [reports, setReports] = useState<Report[]>([]);
     const [searchTerm, setSearchTerm] = useState('');
-    const [statusFilter, setStatusFilter] = useState<ReportStatus | 'all'>('all');
+    const [statusFilter, setStatusFilter] = useState<ReportStatus[]>([]);
+    const [isStatusDropdownOpen, setIsStatusDropdownOpen] = useState(false);
+    const statusDropdownRef = useRef<HTMLDivElement>(null);
     const [typeFilter, setTypeFilter] = useState<'all' | 'lost' | 'found'>('all');
     const [sortOption, setSortOption] = useState<string>('date_desc');
     const [startDate, setStartDate] = useState('');
@@ -36,10 +38,22 @@ const ReportManagement: React.FC = () => {
         }
     }, []);
 
+    useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+            if (statusDropdownRef.current && !statusDropdownRef.current.contains(event.target as Node)) {
+                setIsStatusDropdownOpen(false);
+            }
+        };
+        document.addEventListener("mousedown", handleClickOutside);
+        return () => {
+            document.removeEventListener("mousedown", handleClickOutside);
+        };
+    }, []);
+
     const filteredReports = useMemo(() => {
         let filtered = reports.filter(report => {
             const matchesSearch = report.item.toLowerCase().includes(searchTerm.toLowerCase());
-            const matchesStatus = statusFilter === 'all' || report.status === statusFilter;
+            const matchesStatus = statusFilter.length === 0 || statusFilter.includes(report.status);
             const matchesType = typeFilter === 'all' || report.type === typeFilter;
             
             const reportDate = new Date(report.date);
@@ -89,15 +103,28 @@ const ReportManagement: React.FC = () => {
         localStorage.setItem('foundtastic-all-reports', JSON.stringify(updatedReports));
     };
 
+    const handleStatusFilterChange = (status: ReportStatus) => {
+        setStatusFilter(prev => {
+            const isSelected = prev.includes(status);
+            if (isSelected) {
+                return prev.filter(s => s !== status);
+            } else {
+                return [...prev, status];
+            }
+        });
+    };
+
     const clearFilters = () => {
         setSearchTerm('');
-        setStatusFilter('all');
+        setStatusFilter([]);
         setTypeFilter('all');
         setSortOption('date_desc');
         setStartDate('');
         setEndDate('');
         setCurrentPage(1);
     };
+
+    const allStatuses: ReportStatus[] = ['pending', 'in_review', 'resolved', 'closed'];
 
     return (
         <div className="flex min-h-screen bg-gray-50">
@@ -136,20 +163,39 @@ const ReportManagement: React.FC = () => {
                         </div>
 
                         {/* Status Filter */}
-                        <div className="lg:col-span-1">
+                        <div className="lg:col-span-1" ref={statusDropdownRef}>
                             <label htmlFor="statusFilter" className="block text-sm font-medium text-slate-700">{t.adminReportsTableHeadStatus}</label>
-                            <select
-                                id="statusFilter"
-                                value={statusFilter}
-                                onChange={(e) => setStatusFilter(e.target.value as ReportStatus | 'all')}
-                                className="mt-1 block w-full px-3 py-2 bg-white border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-brand-primary focus:border-brand-primary"
-                            >
-                                <option value="all">{t.adminAllStatuses}</option>
-                                <option value="pending">{t.status.pending}</option>
-                                <option value="in_review">{t.status.in_review}</option>
-                                <option value="resolved">{t.status.resolved}</option>
-                                <option value="closed">{t.status.closed}</option>
-                            </select>
+                            <div className="relative mt-1">
+                                <button
+                                    type="button"
+                                    onClick={() => setIsStatusDropdownOpen(!isStatusDropdownOpen)}
+                                    className="relative w-full cursor-default rounded-md border border-slate-300 bg-white py-2 pl-3 pr-10 text-left shadow-sm focus:border-brand-primary focus:outline-none focus:ring-1 focus:ring-brand-primary sm:text-sm"
+                                >
+                                    <span className="block truncate">
+                                        {statusFilter.length === 0 ? t.adminAllStatuses : statusFilter.map(s => t.status[s]).join(', ')}
+                                    </span>
+                                    <span className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-2">
+                                        <svg className="h-5 w-5 text-gray-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                                            <path fillRule="evenodd" d="M10 3a.75.75 0 01.53.22l3.5 3.5a.75.75 0 01-1.06 1.06L10 4.81 6.53 8.28a.75.75 0 01-1.06-1.06l3.5-3.5A.75.75 0 0110 3zm-3.72 9.28a.75.75 0 011.06 0L10 15.19l3.47-3.47a.75.75 0 111.06 1.06l-4 4a.75.75 0 01-1.06 0l-4-4a.75.75 0 010-1.06z" clipRule="evenodd" />
+                                        </svg>
+                                    </span>
+                                </button>
+                                {isStatusDropdownOpen && (
+                                    <div className="absolute z-10 mt-1 max-h-60 w-full overflow-auto rounded-md bg-white py-1 text-base shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none sm:text-sm">
+                                        {allStatuses.map(status => (
+                                            <label key={status} className="flex cursor-pointer items-center space-x-3 py-2 px-3 text-gray-900 hover:bg-gray-100">
+                                                <input
+                                                    type="checkbox"
+                                                    checked={statusFilter.includes(status)}
+                                                    onChange={() => handleStatusFilterChange(status)}
+                                                    className="h-4 w-4 rounded border-gray-300 text-brand-primary focus:ring-brand-primary"
+                                                />
+                                                <span>{t.status[status]}</span>
+                                            </label>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
                         </div>
                         
                         {/* Date Filters */}

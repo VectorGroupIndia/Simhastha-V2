@@ -1,3 +1,4 @@
+
 import { GoogleGenAI, Type } from "@google/genai";
 import { ItemCategory } from "../types";
 import { CATEGORIES } from "../constants";
@@ -17,6 +18,7 @@ export interface GeminiAnalysisResult {
   brand: string;
   color: string;
   material: string;
+  identifyingMarks: string;
 }
 
 // This is a mock function for development when an API key isn't available.
@@ -34,6 +36,7 @@ const analyzeItemImageMock = (
         brand: "Sony",
         color: "Black",
         material: "Plastic",
+        identifyingMarks: "Small scratch on the right earcup.",
       });
     }, 1500);
   });
@@ -53,7 +56,15 @@ const analyzeItemImageLive = async (
     };
 
     const textPart = {
-        text: `Analyze the image of this item. Based on the image, provide a concise title, a helpful description, suggest the most appropriate category, a suitable subcategory, and if possible, identify the item's brand, main color, and material for a lost and found website. The available categories are: ${CATEGORIES.join(', ')}. The subcategory should be a specific type of the item (e.g., 'Smartphone' for 'Electronics').`
+        text: `Analyze the image of this item for a lost and found website. Based on the image, provide:
+1.  A concise title (e.g., 'Black Leather Wallet', 'Silver iPhone 13').
+2.  A helpful description of the item.
+3.  The most appropriate category from this list: ${CATEGORIES.join(', ')}.
+4.  A specific subcategory (e.g., 'Headphones', 'Backpack', 'Passport').
+5.  The item's brand, if identifiable.
+6.  The primary color.
+7.  The primary material (e.g., 'Leather', 'Plastic').
+8.  Any unique identifying marks visible, such as scratches, stickers, cracks, or other distinct features. If none are visible, this can be an empty string.`
     };
 
     const response = await ai.models.generateContent({
@@ -83,7 +94,11 @@ const analyzeItemImageLive = async (
             },
             brand: { type: Type.STRING, description: "The brand of the item, if identifiable (e.g., 'Apple', 'Samsonite'). Optional." },
             color: { type: Type.STRING, description: "The primary color of the item. Optional." },
-            material: { type: Type.STRING, description: "The primary material of the item (e.g., 'Leather', 'Plastic', 'Cotton'). Optional." }
+            material: { type: Type.STRING, description: "The primary material of the item (e.g., 'Leather', 'Plastic', 'Cotton'). Optional." },
+            identifyingMarks: {
+              type: Type.STRING,
+              description: "Any unique marks like scratches, stickers, or defects visible on the item. Optional."
+            }
           },
           required: ["title", "description", "category", "subcategory"],
         }
