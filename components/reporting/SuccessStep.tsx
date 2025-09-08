@@ -1,4 +1,5 @@
 
+
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ReportData } from '../../pages/ReportFlowPage';
@@ -42,21 +43,37 @@ const SuccessStep: React.FC<SuccessStepProps> = ({ onFileAnother, reportData, ma
         if (report.tags) tableRows.push(["Tags / Keywords", report.tags]);
 
         let startY = 40;
-        if (report.imagePreview) {
-            try {
-                const img = new Image();
-                img.src = report.imagePreview;
-                const imgProps = doc.getImageProperties(img);
-                const pdfWidth = doc.internal.pageSize.getWidth();
-                const margin = 14;
-                const availableWidth = pdfWidth - margin * 2;
-                const aspect = imgProps.height / imgProps.width;
-                const imgHeight = availableWidth * aspect;
-                doc.addImage(report.imagePreview, 'PNG', margin, startY, availableWidth, imgHeight > 100 ? 100 : imgHeight);
-                startY += (imgHeight > 100 ? 100 : imgHeight) + 10;
-            } catch (e) {
-                console.error("Error adding image to PDF", e);
-            }
+        if (report.imagePreviews && report.imagePreviews.length > 0) {
+            doc.text("Images", 14, startY);
+            startY += 8;
+            report.imagePreviews.forEach(imgData => {
+                try {
+                    const img = new Image();
+                    img.src = imgData;
+                    const imgProps = doc.getImageProperties(img);
+                    const pdfWidth = doc.internal.pageSize.getWidth();
+                    const margin = 14;
+                    const availableWidth = pdfWidth - margin * 2;
+                    const aspect = imgProps.height / imgProps.width;
+                    let imgHeight = availableWidth * aspect;
+                    let imgWidth = availableWidth;
+
+                    if (imgHeight > 80) {
+                        imgHeight = 80;
+                        imgWidth = imgHeight / aspect;
+                    }
+                    
+                    if (startY + imgHeight > 280) { // Check for page break
+                        doc.addPage();
+                        startY = 20;
+                    }
+
+                    doc.addImage(imgData, 'PNG', margin, startY, imgWidth, imgHeight);
+                    startY += imgHeight + 5;
+
+                } catch (e) { console.error("Error adding image to PDF", e); }
+            });
+            startY += 5;
         }
         
         doc.autoTable({
@@ -80,7 +97,7 @@ const SuccessStep: React.FC<SuccessStepProps> = ({ onFileAnother, reportData, ma
     
     return (
         <div className="text-center space-y-8">
-            <svg className="mx-auto h-16 w-16 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <svg className="mx-auto h-16 w-16 text-green-500" fill="none" viewBox="0 0 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
             <p className="text-lg text-slate-700">

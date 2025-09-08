@@ -11,6 +11,7 @@ import AuthoritySidebar from './components/AuthoritySidebar';
 import { Link } from 'react-router-dom';
 import { useAuth, FullUser } from '../../contexts/AuthContext';
 import ProfileModal from '../../components/ProfileModal';
+import LiveMapModal from '../LiveMapPage';
 
 // Icons
 const SosIcon = (props: React.SVGProps<SVGSVGElement>) => <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="2" stroke="currentColor" {...props}><path strokeLinecap="round" strokeLinejoin="round" d="M18.364 5.636a9 9 0 010 12.728M11.636 8.364a5 5 0 010 7.072M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>;
@@ -41,6 +42,7 @@ const AuthorityDashboard: React.FC = () => {
     const [reportToAction, setReportToAction] = useState<{ report: Report; action: 'verify' | 'reject' } | null>(null);
     const volunteers = mockUsers.filter(u => u.role === 'volunteer');
     const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
+    const [isMapModalOpen, setIsMapModalOpen] = useState(false);
 
     const loadSosData = () => {
         try {
@@ -271,9 +273,9 @@ const AuthorityDashboard: React.FC = () => {
                         <div className="lg:col-span-3 bg-white p-4 rounded-lg border flex flex-col items-center justify-center min-h-[200px]">
                              <h3 className="text-lg font-semibold text-gray-700">{t.authorityLocationHeatmap}</h3>
                              <p className="text-gray-500 mt-2 text-center">View a live map of all reports, SOS alerts, and personnel locations to get a complete operational overview.</p>
-                             <Link to="/live-map" className="mt-4 px-6 py-2 bg-brand-primary text-white font-semibold text-sm rounded-md hover:bg-brand-primary/90 transition-colors">
+                             <button onClick={() => setIsMapModalOpen(true)} className="mt-4 px-6 py-2 bg-brand-primary text-white font-semibold text-sm rounded-md hover:bg-brand-primary/90 transition-colors">
                                  Open Live Map
-                             </Link>
+                             </button>
                         </div>
                     </div>
                 </div>
@@ -288,7 +290,7 @@ const AuthorityDashboard: React.FC = () => {
                             {pendingReports.length > 0 ? pendingReports.map(report => (
                                 <div key={report.id} className="p-4 border rounded-lg flex items-center justify-between">
                                     <div className="flex items-center">
-                                        <img src={report.imageUrl} alt={report.item} className="w-12 h-12 object-cover rounded-md mr-4"/>
+                                        <img src={report.imageUrls[0]} alt={report.item} className="w-12 h-12 object-cover rounded-md mr-4"/>
                                         <div>
                                             <p className="font-semibold text-gray-900">{report.item}</p>
                                             <p className="text-sm text-gray-500">{report.date} - {report.location}</p>
@@ -432,6 +434,8 @@ const AuthorityDashboard: React.FC = () => {
                     user={user as FullUser}
                 />
             )}
+
+            <LiveMapModal isOpen={isMapModalOpen} onClose={() => setIsMapModalOpen(false)} />
         </div>
     );
 };

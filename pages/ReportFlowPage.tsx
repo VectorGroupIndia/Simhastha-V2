@@ -12,7 +12,7 @@ import ReportFormStep from '../components/reporting/ReportFormStep';
 import ConfirmationStep from '../components/reporting/ConfirmationStep';
 import SuccessStep from '../components/reporting/SuccessStep';
 import { Report } from './ProfilePage';
-import { findMatchingReports } from '../services/gemini';
+import { findMatchingReports, getTagsFromText, translateToEnglish } from '../services/gemini';
 
 export interface ReportData {
     reportType: 'lost' | 'found';
@@ -28,8 +28,8 @@ export interface ReportData {
     serialNumber: string;
     city: string;
     tags: string;
-    image: File | null;
-    imagePreview: string | null;
+    images: File[];
+    imagePreviews: string[];
 }
 
 type Step = 'auth' | 'instructions' | 'form' | 'confirmation' | 'success';
@@ -44,7 +44,7 @@ const BackgroundBlobs: React.FC = () => (
 const ReportFlowPage: React.FC = () => {
     const { user } = useAuth();
     const navigate = useNavigate();
-    const { t } = useLanguage();
+    const { language, t } = useLanguage();
     const { addNotification } = useNotification();
 
     const [step, setStep] = useState<Step>(user ? 'instructions' : 'auth');
@@ -62,8 +62,8 @@ const ReportFlowPage: React.FC = () => {
         serialNumber: '',
         city: 'Ujjain',
         tags: '',
-        image: null,
-        imagePreview: null,
+        images: [],
+        imagePreviews: [],
     });
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [matchIds, setMatchIds] = useState<string[]>([]);
@@ -111,32 +111,54 @@ const ReportFlowPage: React.FC = () => {
     
     const handleConfirm = async () => {
         if (!user) {
-            console.error("User not logged in, cannot submit report.");
             addNotification({ title: 'Error', message: 'You must be logged in to submit a report.' });
             return;
         }
         setIsSubmitting(true);
-        console.log("Submitting report:", reportData);
         
         try {
-            const allReportsStr = localStorage.getItem('foundtastic-all-reports');
-            let allReports: Report[] = allReportsStr ? JSON.parse(allReportsStr) : [];
+            // 1. Prepare data for processing (all in English)
+            let processedData = { ...reportData };
+            if (language !== 'English') {
+                const [itemName, description, brand, color, material, identifyingMarks, location, tags] = await Promise.all([
+                    translateToEnglish(reportData.itemName, language),
+                    translateToEnglish(reportData.description, language),
+                    translateToEnglish(reportData.brand, language),
+                    translateToEnglish(reportData.color, language),
+                    translateToEnglish(reportData.material, language),
+                    translateToEnglish(reportData.identifyingMarks, language),
+                    translateToEnglish(reportData.location, language),
+                    translateToEnglish(reportData.tags, language),
+                ]);
+                processedData = { ...processedData, itemName, description, brand, color, material, identifyingMarks, location, tags };
+            }
+
+            // 2. AI Text Analysis for tags
+            if (processedData.description) {
+                const aiTags = await getTagsFromText(processedData.description);
+                const userTags = processedData.tags ? processedData.tags.split(',').map(t => t.trim()).filter(Boolean) : [];
+                const combinedTags = [...new Set([...userTags, ...aiTags])];
+                processedData.tags = combinedTags.join(', ');
+            }
             
-// FIX: Added required 'reporterId' property to the newReport object.
+            // 3. Create the final Report object
             const newReport: Report = {
                 id: `rep-${Date.now()}`,
                 reporterId: user.id,
                 reportCategory: 'item',
-                type: reportData.reportType,
-                item: reportData.itemName,
-                description: reportData.description,
+                type: processedData.reportType,
+                item: processedData.itemName,
+                description: processedData.description,
                 date: new Date().toISOString().split('T')[0],
                 status: 'pending',
-                location: `${reportData.location}, ${reportData.city}`,
-                imageUrl: reportData.imagePreview || '',
+                location: `${processedData.location}, ${processedData.city}`,
+                imageUrls: processedData.imagePreviews,
                 matches: [],
             };
 
+            // 4. Find matches
+            const allReportsStr = localStorage.getItem('foundtastic-all-reports');
+            let allReports: Report[] = allReportsStr ? JSON.parse(allReportsStr) : [];
             const candidateType = newReport.type === 'lost' ? 'found' : 'lost';
             const candidates = allReports.filter(r => r.type === candidateType);
 
@@ -158,25 +180,28 @@ const ReportFlowPage: React.FC = () => {
                     });
                 }
             }
-
+            
+            // 5. Save and Notify
             const updatedReports = [...allReports, newReport];
             localStorage.setItem('foundtastic-all-reports', JSON.stringify(updatedReports));
             
             addNotification({
                 title: t.notificationReportFiledTitle,
-                message: t.notificationReportFiledBody.replace('{itemName}', newReport.item),
+                message: t.notificationReportFiledBody.replace('{itemName}', reportData.itemName),
                 link: '/profile'
             });
-            if (newReport.matches.length > 0) {
+
+            if (newReport.matches && newReport.matches.length > 0) {
                 addNotification({
                     title: t.notificationMatchFoundTitle,
-                    message: t.notificationMatchFoundBody.replace('{itemName}', newReport.item),
+                    message: t.notificationMatchFoundBody.replace('{itemName}', reportData.itemName),
                     link: '/profile'
                 });
             }
 
         } catch (error) {
             console.error("Failed during report submission and matching process:", error);
+            addNotification({ title: 'Submission Failed', message: 'An error occurred while filing your report.' });
         } finally {
             setIsSubmitting(false);
             setStep('success');
@@ -198,8 +223,8 @@ const ReportFlowPage: React.FC = () => {
             serialNumber: '',
             city: 'Ujjain',
             tags: '',
-            image: null,
-            imagePreview: null,
+            images: [],
+            imagePreviews: [],
         });
         setMatchIds([]);
         setStep('instructions');

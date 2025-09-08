@@ -300,7 +300,7 @@ const ReportManagement: React.FC = () => {
                                             type="checkbox"
                                             className="h-4 w-4 rounded border-gray-300 text-brand-primary focus:ring-brand-primary"
                                             checked={isAllOnPageSelected}
-// FIX: The ref callback was implicitly returning a boolean, causing a type error. The arrow function's body is wrapped in curly braces to ensure it returns void.
+                                            // FIX: The ref callback was implicitly returning a boolean, causing a type error. The arrow function's body is wrapped in curly braces to ensure it returns void.
                                             ref={el => {
                                                 if (el) {
                                                     el.indeterminate = isSomeOnPageSelected;
@@ -331,7 +331,7 @@ const ReportManagement: React.FC = () => {
                                         <td className="px-6 py-4 whitespace-nowrap">
                                             <div className="flex items-center">
                                                 <div className="flex-shrink-0 h-10 w-10">
-                                                    <img className="h-10 w-10 rounded-md object-cover" src={report.imageUrl} alt={report.item} />
+                                                    <img className="h-10 w-10 rounded-md object-cover" src={report.imageUrls[0]} alt={report.item} />
                                                 </div>
                                                 <div className="ml-4">
                                                     <div className="text-sm font-medium text-gray-900">{report.item}</div>

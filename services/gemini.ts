@@ -1,4 +1,5 @@
 
+
 import { GoogleGenAI, Type } from "@google/genai";
 import { ItemCategory } from "../types";
 import { CATEGORIES } from "../constants";
@@ -23,14 +24,13 @@ export interface GeminiAnalysisResult {
 
 // This is a mock function for development when an API key isn't available.
 const analyzeItemImageMock = (
-  _base64Image: string,
-  _mimeType: string
+  _base64Images: { mimeType: string; data: string }[]
 ): Promise<GeminiAnalysisResult> => {
   return new Promise((resolve) => {
     setTimeout(() => {
       resolve({
         title: "Mock: Black Headphones",
-        description: "A pair of over-ear black headphones, likely for listening to music. They appear to be in good condition.",
+        description: "A pair of over-ear black headphones, likely for listening to music. They appear to be in good condition. Mocked response based on multiple images.",
         category: "Electronics",
         subcategory: "Headphones",
         brand: "Sony",
@@ -42,23 +42,23 @@ const analyzeItemImageMock = (
   });
 };
 
+
 // This is the primary function that calls the Gemini API.
 const analyzeItemImageLive = async (
-  base64Image: string,
-  mimeType: string
+  base64Images: { mimeType: string; data: string }[]
 ): Promise<GeminiAnalysisResult> => {
   try {
-    const imagePart = {
-      inlineData: {
-        data: base64Image,
-        mimeType: mimeType,
-      },
-    };
+    const imageParts = base64Images.map(image => ({
+        inlineData: {
+            data: image.data,
+            mimeType: image.mimeType,
+        },
+    }));
 
     const textPart = {
-        text: `You are an expert item identifier for a lost and found platform. Analyze the provided image and return a single, minified JSON object with the following structure. Do not include any markdown formatting like \`\`\`json.
+        text: `You are an expert item identifier for a lost and found platform. Analyze the provided images and return a single, minified JSON object with the following structure. Do not include any markdown formatting like \`\`\`json.
 - "title": A concise title (e.g., "Black Leather Wallet", "Silver iPhone 13").
-- "description": A helpful, detailed description of the item.
+- "description": A helpful, detailed description of the item, synthesizing details from all images.
 - "category": The most appropriate category from this exact list: [${CATEGORIES.join(', ')}].
 - "subcategory": A specific subcategory (e.g., "Headphones", "Backpack", "Passport").
 - "brand": The item's brand, if identifiable. If not, use an empty string.
@@ -69,7 +69,7 @@ const analyzeItemImageLive = async (
 
     const response = await ai.models.generateContent({
       model: "gemini-2.5-flash",
-      contents: { parts: [imagePart, textPart] },
+      contents: { parts: [...imageParts, textPart] },
       config: {
         responseMimeType: "application/json",
         responseSchema: {
@@ -197,8 +197,8 @@ export const translateFromEnglish = process.env.API_KEY
 
 const findMatchingReportsMock = async (sourceReport: Report, candidates: Report[]): Promise<string[]> => {
     console.log("Using mock matching function.");
-    if (sourceReport.imageUrl) {
-        console.log("Image provided, but mock function does not perform visual matching.");
+    if (sourceReport.imageUrls && sourceReport.imageUrls.length > 0) {
+        console.log("Images provided, but mock function does not perform visual matching.");
     }
     return new Promise(resolve => {
         setTimeout(() => {
@@ -225,6 +225,8 @@ const findMatchingReportsLive = async (sourceReport: Report, candidates: Report[
             description: c.description,
             location: c.location
         }));
+        
+        const hasImages = sourceReport.imageUrls && sourceReport.imageUrls.length > 0;
 
         const promptText = `You are an intelligent assistant for a lost and found platform. Your task is to find potential matches for a given report from a list of candidate reports. Your response must be a single, minified JSON object with one key: "matchedReportIds", which is an array of strings. Do not include any markdown formatting.
 
@@ -232,7 +234,7 @@ const findMatchingReportsLive = async (sourceReport: Report, candidates: Report[
 A match is a strong potential match ONLY if it meets these criteria:
 1.  **Item Similarity:** The items must be very similar in name, description, color, brand, etc.
 2.  **Location Proximity:** The reported locations must be reasonably close to each other. This is a high-priority factor.
-${sourceReport.imageUrl ? "3. **Visual Confirmation:** An image of the source item is provided. This is the MOST IMPORTANT factor. The description of a candidate report MUST align with the visual characteristics in the image. If the description contradicts the image (e.g., wrong color, different brand visible), it is NOT a match." : ""}
+${hasImages ? "3. **Visual Confirmation:** Images of the source item are provided. This is the MOST IMPORTANT factor. The description of a candidate report MUST align with the visual characteristics in the images. If the description contradicts the images (e.g., wrong color, different brand visible), it is NOT a match." : ""}
 
 **Source Report Details ('${sourceReport.type}' report):**
 - Item Name: ${sourceReport.item}
@@ -249,18 +251,16 @@ Example response: {"matchedReportIds": ["rep2", "rep14"]}`;
         
         const parts: ({ text: string } | { inlineData: { mimeType: string; data: string; } })[] = [];
 
-        if (sourceReport.imageUrl && sourceReport.imageUrl.startsWith('data:')) {
-            const [mimePart, dataPart] = sourceReport.imageUrl.split(';base64,');
-            const mimeType = mimePart.split(':')[1];
-            if (mimeType && dataPart) {
-                const imagePart = {
-                    inlineData: {
-                        mimeType,
-                        data: dataPart,
-                    },
-                };
-                parts.push(imagePart);
-            }
+        if (hasImages) {
+            sourceReport.imageUrls.forEach(url => {
+                if (url.startsWith('data:')) {
+                    const [mimePart, dataPart] = url.split(';base64,');
+                    const mimeType = mimePart.split(':')[1];
+                    if (mimeType && dataPart) {
+                        parts.push({ inlineData: { mimeType, data: dataPart } });
+                    }
+                }
+            });
         }
         parts.push(textPart);
 
@@ -297,6 +297,51 @@ Example response: {"matchedReportIds": ["rep2", "rep14"]}`;
 export const findMatchingReports = process.env.API_KEY
     ? findMatchingReportsLive
     : findMatchingReportsMock;
+    
+// --- Text Analysis Logic ---
+
+const getTagsFromTextMock = async (description: string): Promise<string[]> => {
+    return new Promise(resolve => {
+        setTimeout(() => {
+            const tags = ['mock', 'tag', 'from', 'description'];
+            resolve(tags);
+        }, 500);
+    });
+}
+
+const getTagsFromTextLive = async (description: string): Promise<string[]> => {
+    if (!description) return [];
+    try {
+        const response = await ai.models.generateContent({
+            model: "gemini-2.5-flash",
+            contents: `Analyze the following item description for a lost and found report. Extract a list of relevant keywords or tags that would help in searching for this item. Focus on nouns, brands, colors, materials, and unique features. Return a single, minified JSON object with one key: "tags", which is an array of strings. Do not include any markdown formatting.\n\nDescription: "${description}"`,
+            config: {
+                responseMimeType: "application/json",
+                responseSchema: {
+                    type: Type.OBJECT,
+                    properties: {
+                        tags: {
+                            type: Type.ARRAY,
+                            items: { type: Type.STRING },
+                            description: "An array of relevant keywords extracted from the description."
+                        }
+                    },
+                    required: ["tags"]
+                }
+            }
+        });
+
+        const jsonText = response.text.trim();
+        const result = JSON.parse(jsonText) as { tags: string[] };
+        return result.tags || [];
+
+    } catch (error) {
+        console.error("Error getting tags from text:", error);
+        return []; // Return empty on failure to not break the flow
+    }
+}
+
+export const getTagsFromText = process.env.API_KEY ? getTagsFromTextLive : getTagsFromTextMock;
 
 
 // --- Face Recognition Logic ---

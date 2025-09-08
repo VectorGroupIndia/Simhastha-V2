@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
-import { Link } from 'react-router-dom';
 import { useAuth, FullUser } from '../contexts/AuthContext';
 import { useNotification } from '../contexts/NotificationContext';
 import { Report } from './ProfilePage';
@@ -181,7 +180,7 @@ const useClustering = (items: MapItem[], zoom: number): DisplayableItem[] => {
     }, [items, distanceThreshold]);
 };
 
-// --- SUB-COMPONENTS for LiveMapPage ---
+// --- SUB-COMPONENTS for LiveMapModal ---
 const Checkbox: React.FC<{ label: string; checked: boolean; onChange: () => void; }> = ({ label, checked, onChange }) => (
     <label className="flex items-center space-x-2 cursor-pointer text-sm text-slate-200">
         <input type="checkbox" checked={checked} onChange={onChange} className="w-4 h-4 rounded text-brand-secondary bg-white/10 border-white/20 focus:ring-brand-secondary focus:ring-2" />
@@ -346,8 +345,12 @@ const GeofenceCircle: React.FC<{ center: { x: number, y: number } | null; radius
     );
 };
 
-// --- MAIN MAP COMPONENT ---
-const LiveMapPage: React.FC = () => {
+interface LiveMapModalProps {
+    isOpen: boolean;
+    onClose: () => void;
+}
+
+const LiveMapModal: React.FC<LiveMapModalProps> = ({ isOpen, onClose }) => {
     const { user } = useAuth();
     const { addNotification } = useNotification();
     const mapRef = useRef<HTMLDivElement>(null);
@@ -381,20 +384,22 @@ const LiveMapPage: React.FC = () => {
     });
 
     // Geofence State
-    const [geofence, setGeofence] = useState<{ center: { x: number; y: number }, radius: number } | null>(null); // Stored in %
+    const [geofence, setGeofence] = useState<{ center: { x: number, y: number }, radius: number } | null>(null); // Stored in %
     const [isDrawingGeofence, setIsDrawingGeofence] = useState(false);
     const [drawingGeofence, setDrawingGeofence] = useState<{ center: { x: number, y: number } | null; radius: number }>({ center: null, radius: 0 });
     const [alertedMembers, setAlertedMembers] = useState<string[]>([]);
 
     // --- DATA LOADING & PERSISTENCE ---
     useEffect(() => {
-        try {
-            setAllReports(JSON.parse(localStorage.getItem('foundtastic-all-reports') || 'null') || mockReports);
-            setAllUsers(JSON.parse(localStorage.getItem('foundtastic-all-users') || 'null') || mockUsers);
-            setAllSos(JSON.parse(localStorage.getItem('foundtastic-sos-requests') || 'null') || mockSosRequests);
-            setAllGroups(JSON.parse(localStorage.getItem('foundtastic-all-groups') || 'null') || mockGroups);
-        } catch (e) { console.error("Failed to load map data", e); }
-    }, []);
+        if (isOpen) {
+            try {
+                setAllReports(JSON.parse(localStorage.getItem('foundtastic-all-reports') || 'null') || mockReports);
+                setAllUsers(JSON.parse(localStorage.getItem('foundtastic-all-users') || 'null') || mockUsers);
+                setAllSos(JSON.parse(localStorage.getItem('foundtastic-sos-requests') || 'null') || mockSosRequests);
+                setAllGroups(JSON.parse(localStorage.getItem('foundtastic-all-groups') || 'null') || mockGroups);
+            } catch (e) { console.error("Failed to load map data", e); }
+        }
+    }, [isOpen]);
 
     useEffect(() => {
         if (user) {
@@ -505,66 +510,74 @@ const LiveMapPage: React.FC = () => {
         setIsDrawingGeofence(false);
         setDrawingGeofence({ center: null, radius: 0 });
     };
+
+    if (!isOpen) {
+        return null;
+    }
     
     return (
-        <div className="h-screen w-screen overflow-hidden bg-gray-200 relative">
-            <header className="absolute top-4 left-4 z-20">
-                 <h1 className="text-2xl font-bold text-brand-dark bg-white/70 backdrop-blur-sm p-2 rounded-lg shadow-lg">found<span className="text-brand-secondary">tastic</span> Live Map</h1>
-            </header>
-            <Link to="/" className="absolute top-6 right-24 z-20 text-sm font-semibold bg-white/70 backdrop-blur-sm p-2 rounded-lg shadow-lg text-brand-dark hover:bg-white transition-colors">Exit Map</Link>
-            
-            <SearchBar query={searchQuery} onQueryChange={setSearchQuery} />
+        <div className="fixed inset-0 bg-black bg-opacity-60 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-fadeIn">
+            <div className="relative h-full w-full bg-gray-200 rounded-lg overflow-hidden shadow-2xl">
+                <header className="absolute top-4 left-4 z-20">
+                     <h1 className="text-2xl font-bold text-brand-dark bg-white/70 backdrop-blur-sm p-2 rounded-lg shadow-lg">found<span className="text-brand-secondary">tastic</span> Live Map</h1>
+                </header>
+                <button onClick={onClose} className="absolute top-4 right-4 z-30 bg-white/70 backdrop-blur-sm p-2 rounded-full shadow-lg text-brand-dark hover:bg-white transition-colors" aria-label="Close map">
+                    <CloseIcon className="w-6 h-6" />
+                </button>
+                
+                <SearchBar query={searchQuery} onQueryChange={setSearchQuery} />
 
-            {isLayerPanelOpen && <LayerControls filters={filters} onFilterChange={handleFilterChange} userRole={user?.role} />}
-            {user?.role === 'user' && isGeofencePanelOpen && (
-                <GeofenceControls
-                    onSet={() => setIsDrawingGeofence(true)}
-                    onClear={clearGeofence}
-                    isDrawing={isDrawingGeofence}
-                    hasGeofence={!!geofence}
-                />
-            )}
-            
-            <div className="absolute bottom-4 right-4 z-20 flex flex-col space-y-2">
-                <button onClick={() => setIsLayerPanelOpen(p => !p)} title="Toggle Layers" className="w-12 h-12 bg-white/80 rounded-full shadow-lg text-brand-dark backdrop-blur-sm hover:bg-white transition-colors flex items-center justify-center"><LayersIcon className="w-6 h-6" /></button>
-                {user?.role === 'user' && <button onClick={() => setIsGeofencePanelOpen(p => !p)} title="Toggle Geofence" className="w-12 h-12 bg-white/80 rounded-full shadow-lg text-brand-dark backdrop-blur-sm hover:bg-white transition-colors flex items-center justify-center"><GeofenceIcon className="w-6 h-6" /></button>}
-                <button onClick={handleLocateMe} title="Find My Location" className="w-12 h-12 bg-white/80 rounded-full shadow-lg text-brand-dark backdrop-blur-sm hover:bg-white transition-colors flex items-center justify-center"><MyLocationIcon className="w-6 h-6" /></button>
-                <button onClick={() => setZoom(z => Math.min(MAX_ZOOM, z + 1))} title="Zoom In" className="w-12 h-12 bg-white/80 rounded-full shadow-lg font-bold text-2xl text-brand-dark backdrop-blur-sm hover:bg-white transition-colors disabled:opacity-50" disabled={zoom === MAX_ZOOM}>+</button>
-                <button onClick={() => setZoom(z => Math.max(1, z - 1))} title="Zoom Out" className="w-12 h-12 bg-white/80 rounded-full shadow-lg font-bold text-2xl text-brand-dark backdrop-blur-sm hover:bg-white transition-colors disabled:opacity-50" disabled={zoom === 1}>-</button>
-            </div>
-
-            <main ref={mapRef} className="w-full h-full relative" onMouseDown={handleMouseDown} onMouseMove={handleMouseMove} onMouseUp={handleMouseUp}>
-                <div className="absolute inset-0">
-                    <iframe className="w-full h-full border-0 grayscale-[50%]" loading="lazy" allowFullScreen referrerPolicy="no-referrer-when-downgrade" src={`https://maps.google.com/maps?q=Ujjain&t=&z=14&ie=UTF8&iwloc=&output=embed&styles=featureType:all|elementType:labels|visibility:off`}></iframe>
-                    {user?.role === 'authority' && filters.heatmap && <HeatmapLayer reports={allReports} />}
+                {isLayerPanelOpen && <LayerControls filters={filters} onFilterChange={handleFilterChange} userRole={user?.role} />}
+                {user?.role === 'user' && isGeofencePanelOpen && (
+                    <GeofenceControls
+                        onSet={() => setIsDrawingGeofence(true)}
+                        onClear={clearGeofence}
+                        isDrawing={isDrawingGeofence}
+                        hasGeofence={!!geofence}
+                    />
+                )}
+                
+                <div className="absolute bottom-4 right-4 z-20 flex flex-col space-y-2">
+                    <button onClick={() => setIsLayerPanelOpen(p => !p)} title="Toggle Layers" className="w-12 h-12 bg-white/80 rounded-full shadow-lg text-brand-dark backdrop-blur-sm hover:bg-white transition-colors flex items-center justify-center"><LayersIcon className="w-6 h-6" /></button>
+                    {user?.role === 'user' && <button onClick={() => setIsGeofencePanelOpen(p => !p)} title="Toggle Geofence" className="w-12 h-12 bg-white/80 rounded-full shadow-lg text-brand-dark backdrop-blur-sm hover:bg-white transition-colors flex items-center justify-center"><GeofenceIcon className="w-6 h-6" /></button>}
+                    <button onClick={handleLocateMe} title="Find My Location" className="w-12 h-12 bg-white/80 rounded-full shadow-lg text-brand-dark backdrop-blur-sm hover:bg-white transition-colors flex items-center justify-center"><MyLocationIcon className="w-6 h-6" /></button>
+                    <button onClick={() => setZoom(z => Math.min(MAX_ZOOM, z + 1))} title="Zoom In" className="w-12 h-12 bg-white/80 rounded-full shadow-lg font-bold text-2xl text-brand-dark backdrop-blur-sm hover:bg-white transition-colors disabled:opacity-50" disabled={zoom === MAX_ZOOM}>+</button>
+                    <button onClick={() => setZoom(z => Math.max(1, z - 1))} title="Zoom Out" className="w-12 h-12 bg-white/80 rounded-full shadow-lg font-bold text-2xl text-brand-dark backdrop-blur-sm hover:bg-white transition-colors disabled:opacity-50" disabled={zoom === 1}>-</button>
                 </div>
 
-                {displayableItems.map((item) => {
-                    const coords = getItemCoords(item);
-                    if (!coords) return null;
-                    const position = convertCoordsToPosition(coords.lat, coords.lng);
-                    const isActive = activeItem?.id === item.id;
-                    const isFaded = searchQuery.trim() && !mapItems.some(i => i.id === item.id);
-                    return (
-                        <button key={item.id}
-                            onClick={() => handleMarkerClick(item)}
-                            onMouseEnter={() => setHoveredItem(item)}
-                            onMouseLeave={() => setHoveredItem(null)}
-                            className="absolute" style={position}>
-                            {getMarker(item, isFaded, isActive)}
-                        </button>
-                    );
-                })}
-                
-                {userLocation && <UserLocationMarker lat={userLocation.lat} lng={userLocation.lng} />}
-                <GeofenceCircle {...geofence} />
-                <GeofenceCircle {...drawingGeofence} />
-                
-                {activeItem && <InfoWindow item={activeItem} onClose={() => setActiveItem(null)} />}
-                {hoveredItem && (!activeItem || activeItem.id !== hoveredItem.id) && <Tooltip item={hoveredItem} />}
-            </main>
+                <main ref={mapRef} className="w-full h-full relative" onMouseDown={handleMouseDown} onMouseMove={handleMouseMove} onMouseUp={handleMouseUp}>
+                    <div className="absolute inset-0">
+                        <iframe className="w-full h-full border-0 grayscale-[50%]" loading="lazy" allowFullScreen referrerPolicy="no-referrer-when-downgrade" src={`https://maps.google.com/maps?q=Ujjain&t=&z=14&ie=UTF8&iwloc=&output=embed&styles=featureType:all|elementType:labels|visibility:off`}></iframe>
+                        {user?.role === 'authority' && filters.heatmap && <HeatmapLayer reports={allReports} />}
+                    </div>
+
+                    {displayableItems.map((item) => {
+                        const coords = getItemCoords(item);
+                        if (!coords) return null;
+                        const position = convertCoordsToPosition(coords.lat, coords.lng);
+                        const isActive = activeItem?.id === item.id;
+                        const isFaded = searchQuery.trim() && !mapItems.some(i => i.id === item.id);
+                        return (
+                            <button key={item.id}
+                                onClick={() => handleMarkerClick(item)}
+                                onMouseEnter={() => setHoveredItem(item)}
+                                onMouseLeave={() => setHoveredItem(null)}
+                                className="absolute" style={position}>
+                                {getMarker(item, isFaded, isActive)}
+                            </button>
+                        );
+                    })}
+                    
+                    {userLocation && <UserLocationMarker lat={userLocation.lat} lng={userLocation.lng} />}
+                    <GeofenceCircle {...geofence} />
+                    <GeofenceCircle {...drawingGeofence} />
+                    
+                    {activeItem && <InfoWindow item={activeItem} onClose={() => setActiveItem(null)} />}
+                    {hoveredItem && (!activeItem || activeItem.id !== hoveredItem.id) && <Tooltip item={hoveredItem} />}
+                </main>
+            </div>
         </div>
     );
 };
 
-export default LiveMapPage;
+export default LiveMapModal;

@@ -1,4 +1,5 @@
 
+
 import React from 'react';
 import { ReportData } from '../../pages/ReportFlowPage';
 import { useLanguage } from '../../contexts/LanguageContext';
@@ -31,8 +32,12 @@ const ConfirmationStep: React.FC<ConfirmationStepProps> = ({ data, onConfirm, on
                     <div className="py-3 sm:grid sm:grid-cols-3 sm:gap-4">
                          <dt className="text-sm font-medium text-slate-600">{t.confirmImage}</dt>
                          <dd className="mt-1 sm:mt-0 sm:col-span-2">
-                             {data.imagePreview ? (
-                                <img src={data.imagePreview} alt="Report item" className="h-32 w-32 object-cover rounded-md bg-slate-100" />
+                             {data.imagePreviews.length > 0 ? (
+                                <div className="flex flex-wrap gap-2">
+                                    {data.imagePreviews.map((preview, index) => (
+                                        <img key={index} src={preview} alt={`Report item ${index+1}`} className="h-24 w-24 object-cover rounded-md bg-slate-100 border" />
+                                    ))}
+                                </div>
                             ) : (
                                 <span className="text-sm text-slate-500">{t.confirmNoImage}</span>
                             )}

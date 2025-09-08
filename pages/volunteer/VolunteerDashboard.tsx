@@ -1,11 +1,12 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { useAuth, FullUser } from '../../contexts/AuthContext';
-import { mockReports, mockAnnouncements, mockVolunteerTasks, mockSosRequests } from '../../data/mockData';
+import { mockAnnouncements, mockVolunteerTasks, mockSosRequests, VolunteerTask } from '../../data/mockData';
 import ConfirmationModal from '../../components/ConfirmationModal';
 import { Link } from 'react-router-dom';
 import { Report } from '../ProfilePage';
 import ProfileModal from '../../components/ProfileModal';
+import LiveMapModal from '../LiveMapPage';
 
 interface Announcement {
     id: string;
@@ -102,12 +103,23 @@ const Header: React.FC<{
     );
 };
 
+const PriorityBadge: React.FC<{ priority: VolunteerTask['priority'] }> = ({ priority }) => {
+    const { t } = useLanguage();
+    const styles: Record<VolunteerTask['priority'], string> = {
+        low: 'bg-slate-100 text-slate-800',
+        medium: 'bg-blue-100 text-blue-800',
+        high: 'bg-yellow-100 text-yellow-800',
+        urgent: 'bg-red-100 text-red-800',
+    };
+    return <span className={`text-xs font-bold px-2.5 py-1 rounded-full ${styles[priority]}`}>{t.taskPriority[priority]}</span>;
+};
+
 
 const VolunteerDashboard: React.FC = () => {
     const { t } = useLanguage();
     const { user } = useAuth();
     const [announcements, setAnnouncements] = useState<Announcement[]>([]);
-    const [tasks, setTasks] = useState(mockVolunteerTasks);
+    const [tasks, setTasks] = useState<VolunteerTask[]>([]);
     const [sosRequests, setSosRequests] = useState<SosRequest[]>([]);
     const [isSosModalOpen, setIsSosModalOpen] = useState(false);
     const [selectedSos, setSelectedSos] = useState<SosRequest | null>(null);
@@ -115,6 +127,17 @@ const VolunteerDashboard: React.FC = () => {
     const [sosToAcknowledge, setSosToAcknowledge] = useState<SosRequest | null>(null);
     const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
     const [isVolunteerActive, setIsVolunteerActive] = useState(true);
+    const [isMapModalOpen, setIsMapModalOpen] = useState(false);
+
+    // Task management state
+    const [searchTerm, setSearchTerm] = useState('');
+    const [priorityFilter, setPriorityFilter] = useState<'all' | VolunteerTask['priority']>('all');
+    const [statusFilter, setStatusFilter] = useState<'all' | VolunteerTask['status']>('all');
+    const [sortOption, setSortOption] = useState('priority_desc');
+    const [completingTask, setCompletingTask] = useState<VolunteerTask | null>(null);
+    const [completionNotes, setCompletionNotes] = useState('');
+    const [viewingNotesTask, setViewingNotesTask] = useState<VolunteerTask | null>(null);
+
 
     const loadSosData = () => {
         try {
@@ -125,6 +148,16 @@ const VolunteerDashboard: React.FC = () => {
             setSosRequests(mockSosRequests);
         }
     };
+    
+    const loadTaskData = () => {
+         try {
+            const storedTasks = localStorage.getItem('foundtastic-volunteer-tasks');
+            setTasks(storedTasks ? JSON.parse(storedTasks) : mockVolunteerTasks);
+        } catch (error) {
+            console.error("Failed to load tasks from localStorage", error);
+            setTasks(mockVolunteerTasks);
+        }
+    }
 
     useEffect(() => {
         const loadInitialData = () => {
@@ -132,10 +165,12 @@ const VolunteerDashboard: React.FC = () => {
                 const storedAnnouncements = localStorage.getItem('foundtastic-announcements');
                 setAnnouncements(storedAnnouncements ? JSON.parse(storedAnnouncements) : mockAnnouncements);
                 loadSosData();
+                loadTaskData();
             } catch (error) {
                 console.error("Failed to load data from localStorage", error);
                 setAnnouncements(mockAnnouncements);
                 setSosRequests(mockSosRequests);
+                setTasks(mockVolunteerTasks);
             }
         };
 
@@ -146,15 +181,57 @@ const VolunteerDashboard: React.FC = () => {
                 setAnnouncements(storedData ? JSON.parse(storedData) : []);
             }
             if (event.key === 'foundtastic-sos-requests') loadSosData();
+            if (event.key === 'foundtastic-volunteer-tasks') loadTaskData();
         };
         window.addEventListener('storage', handleStorageChange);
         return () => window.removeEventListener('storage', handleStorageChange);
     }, []);
+    
+    const processedTasks = useMemo(() => {
+        const priorityOrder: Record<VolunteerTask['priority'], number> = { 'urgent': 4, 'high': 3, 'medium': 2, 'low': 1 };
+        
+        return tasks
+            .filter(task => {
+                const matchesSearch = task.title.toLowerCase().includes(searchTerm.toLowerCase());
+                const matchesPriority = priorityFilter === 'all' || task.priority === priorityFilter;
+                const matchesStatus = statusFilter === 'all' || task.status === statusFilter;
+                return matchesSearch && matchesPriority && matchesStatus;
+            })
+            .sort((a, b) => {
+                const [sortKey, sortOrder] = sortOption.split('_');
+                let comparison = 0;
+                if (sortKey === 'priority') {
+                    comparison = priorityOrder[a.priority] - priorityOrder[b.priority];
+                } else if (sortKey === 'dueDate') {
+                    comparison = new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime();
+                }
+                return sortOrder === 'asc' ? comparison : -comparison;
+            });
+    }, [tasks, searchTerm, priorityFilter, statusFilter, sortOption]);
 
     const handleTaskStatusChange = (taskId: string, newStatus: 'in_progress' | 'completed') => {
-        setTasks(tasks.map(task => task.id === taskId ? { ...task, status: newStatus } : task));
+        const updatedTasks = tasks.map(task => task.id === taskId ? { ...task, status: newStatus } : task);
+        setTasks(updatedTasks);
+        localStorage.setItem('foundtastic-volunteer-tasks', JSON.stringify(updatedTasks));
     };
     
+    const handleOpenCompletionModal = (task: VolunteerTask) => {
+        setCompletingTask(task);
+        setCompletionNotes('');
+    };
+    
+    const handleConfirmCompletion = () => {
+        if (!completingTask) return;
+        const updatedTasks = tasks.map(task =>
+            task.id === completingTask.id
+                ? { ...task, status: 'completed' as const, completionNotes: completionNotes }
+                : task
+        );
+        setTasks(updatedTasks);
+        localStorage.setItem('foundtastic-volunteer-tasks', JSON.stringify(updatedTasks));
+        setCompletingTask(null);
+    };
+
     const handleSendSos = () => {
         if (!user) return;
         const newSos: SosRequest = {
@@ -219,10 +296,78 @@ const VolunteerDashboard: React.FC = () => {
                         
                         <div className="bg-white p-6 rounded-lg shadow-lg animate-fadeIn" style={{ animationDelay: '200ms' }}>
                              <h2 className="text-xl font-bold text-gray-800 mb-4 flex items-center"><ClipboardListIcon className="h-6 w-6 text-brand-primary mr-3" />{t.volunteerAssignedTasks}</h2>
+                             
+                            <div className="p-4 bg-slate-50 rounded-lg border mb-6">
+                                <h3 className="font-semibold text-slate-700 mb-3">{t.taskFiltersAndSort}</h3>
+                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 items-end">
+                                    <div className="md:col-span-2">
+                                        <label htmlFor="taskSearch" className="sr-only">{t.taskSearchPlaceholder}</label>
+                                        <input type="text" id="taskSearch" placeholder={t.taskSearchPlaceholder} value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="block w-full px-3 py-2 bg-white border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-brand-primary focus:border-brand-primary"/>
+                                    </div>
+                                    <div>
+                                        <label htmlFor="statusFilter" className="block text-xs font-medium text-slate-600">{t.taskFilterByStatus}</label>
+                                        <select id="statusFilter" value={statusFilter} onChange={e => setStatusFilter(e.target.value as any)} className="mt-1 block w-full px-3 py-2 bg-white border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-brand-primary focus:border-brand-primary">
+                                            <option value="all">All</option>
+                                            <option value="pending">Pending</option>
+                                            <option value="in_progress">In Progress</option>
+                                            <option value="completed">Completed</option>
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label htmlFor="priorityFilter" className="block text-xs font-medium text-slate-600">{t.taskFilterByPriority}</label>
+                                        <select id="priorityFilter" value={priorityFilter} onChange={e => setPriorityFilter(e.target.value as any)} className="mt-1 block w-full px-3 py-2 bg-white border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-brand-primary focus:border-brand-primary">
+                                            <option value="all">All</option>
+                                            <option value="urgent">Urgent</option>
+                                            <option value="high">High</option>
+                                            <option value="medium">Medium</option>
+                                            <option value="low">Low</option>
+                                        </select>
+                                    </div>
+                                    <div className="md:col-span-2">
+                                        <label htmlFor="sortOption" className="block text-xs font-medium text-slate-600">{t.taskSortBy}</label>
+                                        <select id="sortOption" value={sortOption} onChange={e => setSortOption(e.target.value)} className="mt-1 block w-full px-3 py-2 bg-white border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-brand-primary focus:border-brand-primary">
+                                            <option value="priority_desc">{t.taskSortPriorityDesc}</option>
+                                            <option value="priority_asc">{t.taskSortPriorityAsc}</option>
+                                            <option value="dueDate_asc">{t.taskSortDueDateAsc}</option>
+                                            <option value="dueDate_desc">{t.taskSortDueDateDesc}</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+                             
                              <div className="space-y-4">
-                                {tasks.length > 0 ? tasks.map(task => (
-                                    <div key={task.id} className="p-4 border rounded-lg"><div className="flex justify-between items-start"><h3 className="font-semibold text-gray-900">{task.title}</h3><span className={`text-xs font-semibold px-2 py-1 rounded-full ${getTaskStatusClass(task.status)}`}>{getTaskStatusText(task.status as any)}</span></div><p className="text-sm text-gray-600 mt-1">{task.description}</p><p className="text-xs text-gray-500 mt-2 flex items-center"><MapPinIcon/> {task.location}</p><div className="mt-3 border-t pt-3 flex items-center justify-between"><button onClick={() => window.open(`https://www.google.com/maps?q=${encodeURIComponent(task.location)}`, '_blank')} className="px-3 py-1 text-xs font-medium text-brand-primary border border-brand-primary rounded-md hover:bg-brand-light">{t.volunteerViewOnMap}</button>{task.status !== 'completed' && (<div className="flex space-x-2">{task.status === 'pending' && <button onClick={() => handleTaskStatusChange(task.id, 'in_progress')} className="px-3 py-1 text-xs font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700">{t.volunteerTaskMarkInProgress}</button>}{task.status === 'in_progress' && <button onClick={() => handleTaskStatusChange(task.id, 'completed')} className="px-3 py-1 text-xs font-medium text-white bg-green-600 rounded-md hover:bg-green-700">{t.volunteerTaskMarkComplete}</button>}</div>)}</div></div>
-                                )) : <div className="text-center py-10"><ClipboardListIcon className="mx-auto h-12 w-12 text-slate-300" /><h3 className="mt-2 text-sm font-semibold text-slate-600">{t.volunteerNoTasks}</h3></div>}
+                                {processedTasks.length > 0 ? processedTasks.map(task => {
+                                    const isOverdue = new Date(task.dueDate) < new Date() && task.status !== 'completed';
+                                    return (
+                                        <div key={task.id} className="p-4 border rounded-lg bg-white shadow-sm">
+                                            <div className="flex justify-between items-start">
+                                                <h3 className="font-bold text-gray-900 pr-4">{task.title}</h3>
+                                                <PriorityBadge priority={task.priority} />
+                                            </div>
+                                            <div className="mt-2 text-sm text-gray-600 space-y-2">
+                                                <p>{task.description}</p>
+                                                <p className="text-xs text-gray-500 flex items-center">
+                                                    <MapPinIcon/> {task.location}
+                                                </p>
+                                                <p className={`text-xs font-semibold ${isOverdue ? 'text-red-600' : 'text-slate-600'}`}>
+                                                    {t.taskDueOn.replace('{date}', new Date(task.dueDate).toLocaleDateString())} {isOverdue && `(${t.taskOverdue})`}
+                                                </p>
+                                            </div>
+                                            
+                                            <div className="mt-3 border-t pt-3 flex items-center justify-between">
+                                                <span className={`text-sm font-semibold px-3 py-1 rounded-full ${getTaskStatusClass(task.status)}`}>{getTaskStatusText(task.status as any)}</span>
+                                                
+                                                <div className="flex items-center space-x-2">
+                                                    {task.status === 'completed' && task.completionNotes && (
+                                                        <button onClick={() => setViewingNotesTask(task)} className="px-3 py-1 text-xs font-medium text-brand-primary border border-brand-primary rounded-md hover:bg-brand-light">{t.viewCompletionNotes}</button>
+                                                    )}
+                                                    {task.status === 'pending' && <button onClick={() => handleTaskStatusChange(task.id, 'in_progress')} className="px-3 py-1 text-xs font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700">{t.volunteerTaskMarkInProgress}</button>}
+                                                    {task.status === 'in_progress' && <button onClick={() => handleOpenCompletionModal(task)} className="px-3 py-1 text-xs font-medium text-white bg-green-600 rounded-md hover:bg-green-700">{t.volunteerTaskMarkComplete}</button>}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    );
+                                }) : <div className="text-center py-10"><ClipboardListIcon className="mx-auto h-12 w-12 text-slate-300" /><h3 className="mt-2 text-sm font-semibold text-slate-600">{t.volunteerNoTasks}</h3></div>}
                              </div>
                         </div>
                     </div>
@@ -232,7 +377,7 @@ const VolunteerDashboard: React.FC = () => {
                             <h2 className="text-xl font-bold text-gray-800 mb-4">Quick Actions</h2>
                             <div className="space-y-3">
                                 <Link to="/report" className="w-full flex items-center justify-center px-4 py-3 border border-transparent text-base font-medium rounded-md shadow-sm text-white bg-brand-secondary hover:opacity-90 transition-opacity">File a New Report</Link>
-                                <Link to="/live-map" className="w-full flex items-center justify-center px-4 py-3 border border-brand-volunteer text-base font-medium rounded-md shadow-sm text-brand-volunteer bg-brand-volunteer/10 hover:bg-brand-volunteer/20 transition-colors">View Live Map</Link>
+                                <button onClick={() => setIsMapModalOpen(true)} className="w-full flex items-center justify-center px-4 py-3 border border-brand-volunteer text-base font-medium rounded-md shadow-sm text-brand-volunteer bg-brand-volunteer/10 hover:bg-brand-volunteer/20 transition-colors">View Live Map</button>
                                 <button onClick={() => setIsSosModalOpen(true)} className="w-full flex items-center justify-center px-4 py-3 border border-transparent text-base font-medium rounded-md shadow-sm text-white bg-red-600 hover:bg-red-700 transition-opacity">SEND SOS ALERT</button>
                             </div>
                         </div>
@@ -250,9 +395,12 @@ const VolunteerDashboard: React.FC = () => {
             </main>
 
             <ConfirmationModal isOpen={!!sosToAcknowledge} onClose={() => setSosToAcknowledge(null)} onConfirm={handleConfirmAcknowledge} title={t.volunteerAcknowledgeModalTitle} message={<p>{t.volunteerAcknowledgeModalMessage.replace('{message}', sosToAcknowledge?.message || '')}</p>} confirmText={t.volunteerAcknowledgeModalConfirm} variant="warning" />
+            <ConfirmationModal isOpen={!!completingTask} onClose={() => setCompletingTask(null)} onConfirm={handleConfirmCompletion} title={t.completeTaskModalTitle.replace('{taskTitle}', completingTask?.title || '')} message={<div><p className="mb-4 text-sm text-gray-600">{t.completeTaskModalMessage}</p><textarea value={completionNotes} onChange={(e) => setCompletionNotes(e.target.value)} rows={4} className="w-full p-2 border rounded-md focus:ring-brand-primary focus:border-brand-primary" placeholder={t.completeTaskModalPlaceholder}/></div>} confirmText={t.completeTaskModalConfirm} variant="info" />
+            <ConfirmationModal isOpen={!!viewingNotesTask} onClose={() => setViewingNotesTask(null)} onConfirm={() => setViewingNotesTask(null)} title={t.taskCompletionNotes} message={<p className="text-sm text-gray-700 whitespace-pre-wrap">{viewingNotesTask?.completionNotes}</p>} confirmText="Close" variant="info" />
             {selectedSos && (<div className="fixed inset-0 bg-black bg-opacity-60 backdrop-blur-sm flex items-center justify-center z-50 p-4" onClick={() => setSelectedSos(null)}><div className="bg-white rounded-xl shadow-2xl max-w-3xl w-full transform transition-all" onClick={e => e.stopPropagation()}><div className="p-6 relative max-h-[90vh] overflow-y-auto"><button onClick={() => setSelectedSos(null)} className="absolute top-4 right-4 text-slate-400 hover:text-slate-800"><svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg></button>{selectedSos.type === 'sighting' ? (<>{/* Sighting Details UI */}</>) : (<>{/* SOS Details UI */}</>)}<div className="mt-6 flex justify-end items-center gap-x-4"><button onClick={() => setSelectedSos(null)} className="px-6 py-2 bg-slate-200 text-slate-800 font-semibold rounded-md hover:bg-slate-300">{t.modalClose}</button>{selectedSos.status === 'new' && (<button onClick={() => { handleAcknowledgeClick(selectedSos); setSelectedSos(null); }} className="px-6 py-2 bg-brand-secondary text-white font-semibold rounded-md hover:opacity-90">{t.volunteerAcknowledge}</button>)}</div></div></div></div>)}
             {isSosModalOpen && (<div className="fixed inset-0 z-50 overflow-y-auto"><div className="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0"><div className="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" onClick={() => setIsSosModalOpen(false)}></div><span className="hidden sm:inline-block sm:align-middle sm:h-screen">&#8203;</span><div className="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full"><div className="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4"><div className="sm:flex sm:items-start"><div className="mx-auto flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full bg-red-100 sm:mx-0 sm:h-10 sm:w-10"><svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg></div><div className="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left"><h3 className="text-lg leading-6 font-medium text-gray-900">{t.volunteerSosModalTitle}</h3><div className="mt-2"><p className="text-sm text-gray-500">{t.volunteerSosModalWarning}</p><textarea rows={3} className="w-full mt-4 p-2 border rounded-md focus:ring-brand-primary focus:border-brand-primary text-sm" placeholder={t.volunteerSosModalMessagePlaceholder} value={sosMessage} onChange={(e) => setSosMessage(e.target.value)}></textarea></div></div></div></div><div className="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse"><button type="button" className="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-red-600 text-base font-medium text-white hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 sm:ml-3 sm:w-auto sm:text-sm" onClick={handleSendSos}>{t.volunteerSosModalSendButton}</button><button type="button" className="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:mt-0 sm:w-auto sm:text-sm" onClick={() => setIsSosModalOpen(false)}>{t.volunteerSosModalCancelButton}</button></div></div></div></div>)}
             {user && (<ProfileModal isOpen={isProfileModalOpen} onClose={() => setIsProfileModalOpen(false)} user={user as FullUser} />)}
+            <LiveMapModal isOpen={isMapModalOpen} onClose={() => setIsMapModalOpen(false)} />
         </div>
     );
 };

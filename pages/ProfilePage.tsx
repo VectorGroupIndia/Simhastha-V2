@@ -24,7 +24,7 @@ export interface Report {
     status: ReportStatus;
     location: string;
     coords?: { lat: number; lng: number };
-    imageUrl: string;
+    imageUrls: string[];
     matches?: string[];
     resolvedDate?: string;
     // Optional fields for persons
@@ -37,6 +37,23 @@ export const statusStyles: { [key in ReportStatus]: string } = {
     in_review: 'bg-blue-400/20 text-blue-300 border-blue-400/30',
     resolved: 'bg-green-400/20 text-green-300 border-green-400/30',
     closed: 'bg-slate-400/20 text-slate-300 border-slate-400/30',
+};
+
+const roleStyles: { [key in User['role']]: string } = {
+    user: 'bg-blue-400/20 text-blue-300 border border-blue-400/30',
+    admin: 'bg-red-400/20 text-red-300 border border-red-400/30',
+    authority: 'bg-purple-400/20 text-purple-300 border border-purple-400/30',
+    volunteer: 'bg-teal-400/20 text-teal-300 border border-teal-400/30',
+};
+
+const getRoleDisplayName = (role: User['role'], t: any) => {
+    switch (role) {
+        case 'user': return t.demoRoleCitizen.split('/')[0]; // Just "Citizen"
+        case 'admin': return t.demoRoleAdmin;
+        case 'authority': return t.demoRoleAuthority;
+        case 'volunteer': return t.demoRoleVolunteer;
+        default: return role;
+    }
 };
 
 const BackgroundBlobs: React.FC = () => (
@@ -94,6 +111,8 @@ const ProfilePage: React.FC = () => {
         </button>
     );
 
+    const roleDisplayName = getRoleDisplayName(user.role, t);
+
     return (
         <div className="relative isolate overflow-hidden min-h-screen py-16">
             <BackgroundBlobs />
@@ -105,7 +124,10 @@ const ProfilePage: React.FC = () => {
                             <div className="md:col-span-1 flex flex-col items-center text-center">
                                 <img src={user.avatarUrl} alt={user.name} className="w-32 h-32 rounded-full border-4 border-white/30 shadow-lg" />
                                 <h1 className="text-2xl font-bold text-white mt-4">{user.name}</h1>
-                                <p className="text-brand-secondary font-semibold">{user.title}</p>
+                                <span className={`mt-2 px-3 py-1 text-xs font-bold tracking-wider rounded-full ${roleStyles[user.role]}`}>
+                                    {roleDisplayName}
+                                </span>
+                                <p className="text-brand-secondary font-semibold mt-2">{user.title}</p>
                                 <p className="text-slate-300 text-sm mt-2">{user.email}</p>
                                 <p className="text-slate-400 text-xs mt-1">{t.profileMemberSince} {user.memberSince}</p>
                             </div>
@@ -258,7 +280,7 @@ const ReportsTab: React.FC<{ reports: Report[]; onSelectReport: (report: Report)
                 {processedReports.length > 0 ? (
                     processedReports.map(report => (
                         <div key={report.id} className="p-4 bg-black/20 border border-white/10 rounded-lg hover:shadow-lg transition-shadow flex flex-col sm:flex-row items-start sm:items-center space-y-3 sm:space-y-0 sm:space-x-4">
-                            <img src={report.imageUrl} alt={report.item} className="w-24 h-24 object-cover rounded-md bg-slate-100 flex-shrink-0" />
+                            <img src={report.imageUrls[0]} alt={report.item} className="w-24 h-24 object-cover rounded-md bg-slate-100 flex-shrink-0" />
                             <div className="flex-grow">
                                 <div className="flex justify-between items-start">
                                     <div>

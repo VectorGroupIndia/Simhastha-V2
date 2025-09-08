@@ -50,7 +50,6 @@ const AppContent: React.FC = () => {
     }, []);
     
     const isHomePage = location.pathname === '/';
-    const isMapPage = location.pathname === '/live-map';
     const isDashboardPage = location.pathname.startsWith('/admin') || 
                             location.pathname.startsWith('/authority') || 
                             location.pathname.startsWith('/volunteer');
@@ -65,14 +64,10 @@ const AppContent: React.FC = () => {
         pageClasses = 'bg-brand-glass-bg text-white';
     }
 
-    if (isMapPage) {
-        pageClasses += ' h-screen overflow-hidden';
-    }
-
     return (
         <div className={`flex flex-col min-h-screen ${pageClasses}`}>
-            {!(isMapPage || isDashboardPage) && <Header />}
-            <main className={`flex-grow ${isMapPage ? 'h-full' : ''}`}>
+            {!isDashboardPage && <Header />}
+            <main className="flex-grow">
                 <Routes>
                     <Route path="/" element={<HomePage />} />
                     <Route path="/about" element={<AboutPage />} />
@@ -83,8 +78,7 @@ const AppContent: React.FC = () => {
                     
                     <Route path="/profile" element={<ProtectedRoute><ProfilePage /></ProtectedRoute>} />
                     <Route path="/my-group" element={<ProtectedRoute role="user"><MyGroupPage /></ProtectedRoute>} />
-                    <Route path="/live-map" element={<ProtectedRoute><LiveMapPage /></ProtectedRoute>} />
-
+                    
                     {/* Admin Routes */}
                     <Route path="/admin" element={<ProtectedRoute role="admin"><AdminDashboard /></ProtectedRoute>} />
                     <Route path="/admin/users" element={<ProtectedRoute role="admin"><UserManagement /></ProtectedRoute>} />
@@ -102,7 +96,7 @@ const AppContent: React.FC = () => {
                     <Route path="/volunteer" element={<ProtectedRoute role="volunteer"><VolunteerDashboard /></ProtectedRoute>} />
                 </Routes>
             </main>
-            {!(isMapPage || isDashboardPage) && <Footer />}
+            {!isDashboardPage && <Footer />}
             {showLanguagePopup && <LanguageSelectorPopup onClose={() => setShowLanguagePopup(false)} />}
         </div>
     );

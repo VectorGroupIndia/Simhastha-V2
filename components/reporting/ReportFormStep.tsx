@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { ReportData } from '../../pages/ReportFlowPage';
-import { analyzeItemImage, translateToEnglish, translateFromEnglish } from '../../services/gemini';
+import { analyzeItemImage, translateFromEnglish } from '../../services/gemini';
 import { useLanguage } from '../../contexts/LanguageContext';
 import Spinner from '../Spinner';
 
@@ -57,8 +57,8 @@ const ReportFormStep: React.FC<ReportFormStepProps> = ({ onSubmit, initialData }
         serialNumber: '',
         city: 'Ujjain',
         tags: '',
-        image: null,
-        imagePreview: null,
+        images: [],
+        imagePreviews: [],
         ...initialData,
     });
     
@@ -68,7 +68,6 @@ const ReportFormStep: React.FC<ReportFormStepProps> = ({ onSubmit, initialData }
     const [analysisSuccess, setAnalysisSuccess] = useState(false);
     const [loadingMessage, setLoadingMessage] = useState(baseLoadingMessages[0]);
     const [errors, setErrors] = useState<Record<string, string>>({});
-    const [isTranslating, setIsTranslating] = useState(false);
 
     useEffect(() => {
         if (formData.category && categories[formData.category as keyof typeof categories]) {
@@ -114,30 +113,48 @@ const ReportFormStep: React.FC<ReportFormStepProps> = ({ onSubmit, initialData }
 
     const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         setAnalysisSuccess(false);
-        if (e.target.files && e.target.files[0]) {
-            const file = e.target.files[0];
-            const reader = new FileReader();
-            reader.onloadend = () => {
+        if (e.target.files) {
+            const filesArray = Array.from(e.target.files);
+            const currentImages = [...formData.images, ...filesArray];
+            
+            const previewPromises = filesArray.map(file => {
+                return new Promise<string>((resolve, reject) => {
+                    const reader = new FileReader();
+                    reader.onloadend = () => resolve(reader.result as string);
+                    reader.onerror = reject;
+                    reader.readAsDataURL(file);
+                });
+            });
+
+            Promise.all(previewPromises).then(newPreviews => {
                 setFormData(prev => ({
                     ...prev,
-                    image: file,
-                    imagePreview: reader.result as string,
+                    images: currentImages,
+                    imagePreviews: [...prev.imagePreviews, ...newPreviews],
                 }));
-            };
-            reader.readAsDataURL(file);
+            });
         }
     };
     
+    const removeImage = (index: number) => {
+        setFormData(prev => ({
+            ...prev,
+            images: prev.images.filter((_, i) => i !== index),
+            imagePreviews: prev.imagePreviews.filter((_, i) => i !== index),
+        }));
+    }
+    
     const handleAnalyzeImage = async () => {
-        if (!formData.image) return;
+        if (formData.images.length === 0) return;
 
         setIsAnalyzing(true);
         setAnalysisSuccess(false);
         setAnalysisError('');
         try {
-            const { mimeType, data: base64ImageData } = await fileToBase64(formData.image);
+            const base64Promises = formData.images.map(file => fileToBase64(file));
+            const base64Images = await Promise.all(base64Promises);
             
-            const analysisResult = await analyzeItemImage(base64ImageData, mimeType);
+            const analysisResult = await analyzeItemImage(base64Images);
             
             let finalData = { ...analysisResult };
 
@@ -204,36 +221,8 @@ const ReportFormStep: React.FC<ReportFormStepProps> = ({ onSubmit, initialData }
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!validateForm()) {
-            return;
-        }
-
-        if (language === 'English') {
+        if (validateForm()) {
             onSubmit(formData);
-            return;
-        }
-
-        setIsTranslating(true);
-        try {
-            const [itemName, description, brand, color, material, identifyingMarks, location, tags] = await Promise.all([
-                translateToEnglish(formData.itemName, language),
-                translateToEnglish(formData.description, language),
-                translateToEnglish(formData.brand, language),
-                translateToEnglish(formData.color, language),
-                translateToEnglish(formData.material, language),
-                translateToEnglish(formData.identifyingMarks, language),
-                translateToEnglish(formData.location, language),
-                translateToEnglish(formData.tags, language),
-            ]);
-
-            const translatedData = { ...formData, itemName, description, brand, color, material, identifyingMarks, location, tags };
-            onSubmit(translatedData);
-
-        } catch (error) {
-            console.error("Translation failed:", error);
-            setErrors(prev => ({ ...prev, form: t.formErrors.translationFailed }));
-        } finally {
-            setIsTranslating(false);
         }
     };
 
@@ -255,25 +244,38 @@ const ReportFormStep: React.FC<ReportFormStepProps> = ({ onSubmit, initialData }
             <div>
                  <label className="block text-sm font-medium text-slate-700">{t.uploadAndAnalyze}</label>
                  <div className="mt-2 p-4 border border-dashed border-slate-300 rounded-lg bg-slate-50/50">
-                     <div className="flex flex-col sm:flex-row items-center gap-4">
-                        {formData.imagePreview ? (
-                            <img src={formData.imagePreview} alt={t.imagePreviewAlt} className="h-24 w-24 object-cover rounded-md bg-slate-100 flex-shrink-0" />
-                        ) : (
-                             <div className="h-24 w-24 flex items-center justify-center rounded-md bg-slate-100 text-slate-400 flex-shrink-0">
-                                 <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"></path><circle cx="12" cy="13" r="3"></circle></svg>
-                             </div>
-                        )}
-                        <div className="flex-grow text-center sm:text-left">
-                            <label htmlFor="file-upload" className="cursor-pointer rounded-md bg-white font-semibold text-brand-primary focus-within:outline-none focus-within:ring-2 focus-within:ring-brand-primary focus-within:ring-offset-2 hover:text-brand-primary/80">
-                                <span>{formData.image ? t.changeFile : t.chooseImage}</span>
-                                <input id="file-upload" name="file-upload" type="file" className="sr-only" onChange={handleImageChange} accept="image/*"/>
-                            </label>
-                            {formData.image && <button type="button" onClick={() => setFormData(p => ({...p, image: null, imagePreview: null}))} className="ml-3 text-sm text-red-600 hover:text-red-800">{t.remove}</button>}
-                            <p className="text-xs text-slate-500 mt-1">{t.imageImprovesMatch}</p>
+                    <div className="flex items-center justify-center w-full">
+                        <label htmlFor="file-upload" className="flex flex-col items-center justify-center w-full h-32 border-2 border-gray-300 border-dashed rounded-lg cursor-pointer bg-gray-50 hover:bg-gray-100">
+                            <div className="flex flex-col items-center justify-center pt-5 pb-6">
+                                <svg className="w-8 h-8 mb-4 text-gray-500" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 20 16"><path stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 13h3a3 3 0 0 0 0-6h-.025A5.56 5.56 0 0 0 16 6.5 5.5 5.5 0 0 0 5.207 5.021C5.137 5.017 5.071 5 5 5a4 4 0 0 0 0 8h2.167M10 15V6m0 0L8 8m2-2 2 2"/></svg>
+                                <p className="mb-2 text-sm text-gray-500"><span className="font-semibold">{t.chooseImage}</span> or drag and drop</p>
+                                <p className="text-xs text-gray-500">SVG, PNG, JPG or GIF (MAX. 800x400px)</p>
+                            </div>
+                            <input id="file-upload" type="file" className="hidden" multiple onChange={handleImageChange} accept="image/*"/>
+                        </label>
+                    </div> 
+
+                    {formData.imagePreviews.length > 0 && (
+                        <div className="mt-4 grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-4">
+                            {formData.imagePreviews.map((preview, index) => (
+                                <div key={index} className="relative group">
+                                    <img src={preview} alt={`Preview ${index + 1}`} className="h-24 w-full object-cover rounded-md" />
+                                    <button
+                                        type="button"
+                                        onClick={() => removeImage(index)}
+                                        className="absolute top-0 right-0 m-1 bg-red-600/70 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs opacity-0 group-hover:opacity-100 transition-opacity"
+                                        aria-label="Remove image"
+                                    >
+                                        &times;
+                                    </button>
+                                </div>
+                            ))}
                         </div>
-                     </div>
+                    )}
+                     <p className="text-xs text-slate-500 mt-2">{t.imageImprovesMatch}</p>
+                     
                      <div className="mt-4">
-                        <button type="button" onClick={handleAnalyzeImage} disabled={!formData.image || isAnalyzing} className="w-full justify-center items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-brand-primary hover:bg-brand-primary/90 disabled:bg-slate-400 disabled:cursor-not-allowed flex">
+                        <button type="button" onClick={handleAnalyzeImage} disabled={formData.images.length === 0 || isAnalyzing} className="w-full justify-center items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-brand-primary hover:bg-brand-primary/90 disabled:bg-slate-400 disabled:cursor-not-allowed flex">
                             {t.analyzeWithAI}
                         </button>
                      </div>
@@ -418,9 +420,8 @@ const ReportFormStep: React.FC<ReportFormStepProps> = ({ onSubmit, initialData }
             {errors.form && <p className="text-sm text-red-600 text-center">{errors.form}</p>}
             
             <div className="border-t pt-6">
-                <button type="submit" disabled={isTranslating} className="w-full bg-brand-secondary text-white font-semibold py-3 px-4 rounded-md hover:opacity-90 transition-opacity disabled:bg-slate-400 disabled:cursor-not-allowed flex justify-center items-center">
-                   {isTranslating && <Spinner className="-ml-1 mr-3" />}
-                    {isTranslating ? t.translatingButton : t.submitButton}
+                <button type="submit" className="w-full bg-brand-secondary text-white font-semibold py-3 px-4 rounded-md hover:opacity-90 transition-opacity flex justify-center items-center">
+                   {t.submitButton}
                 </button>
             </div>
         </form>

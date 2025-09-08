@@ -23,6 +23,7 @@ const CalendarIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
 const ReportDetailsModal: React.FC<ReportDetailsModalProps> = ({ report, onClose }) => {
     const { t, translateStatus } = useLanguage();
     const [confirmedSightings, setConfirmedSightings] = useState<Sighting[]>([]);
+    const [activeImage, setActiveImage] = useState(report.imageUrls[0] || '');
     
     useEffect(() => {
         if (report.reportCategory === 'person') {
@@ -96,9 +97,25 @@ const ReportDetailsModal: React.FC<ReportDetailsModalProps> = ({ report, onClose
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                         {/* Image Column */}
-                        <div className="aspect-square bg-black/20 rounded-lg overflow-hidden">
-                            <img src={report.imageUrl} alt={report.item} className="w-full h-full object-cover" />
+                        <div className="flex flex-col gap-4">
+                            <div className="aspect-square bg-black/20 rounded-lg overflow-hidden flex items-center justify-center">
+                                {activeImage ? (
+                                    <img src={activeImage} alt={report.item} className="w-full h-full object-cover" />
+                                ) : (
+                                    <span className="text-slate-400">No Image</span>
+                                )}
+                            </div>
+                            {report.imageUrls && report.imageUrls.length > 1 && (
+                                <div className="flex gap-2 justify-center">
+                                    {report.imageUrls.map((url, index) => (
+                                        <button key={index} onClick={() => setActiveImage(url)} className={`w-16 h-16 rounded-md overflow-hidden border-2 ${activeImage === url ? 'border-brand-secondary' : 'border-transparent'}`}>
+                                            <img src={url} alt={`Thumbnail ${index + 1}`} className="w-full h-full object-cover"/>
+                                        </button>
+                                    ))}
+                                </div>
+                            )}
                         </div>
+
 
                         {/* Details Column */}
                         <div className="flex flex-col">
