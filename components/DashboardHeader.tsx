@@ -47,7 +47,7 @@ const DashboardHeader: React.FC<DashboardHeaderProps> = ({ title, onProfileClick
             <div className="flex items-center space-x-4">
                  <Link to="/" className="hidden sm:flex items-center text-sm font-medium text-brand-primary hover:underline">
                     <HomeIcon />
-                    Home
+                    {t.navHome}
                 </Link>
                 <div className="relative" ref={menuRef}>
                     <button onClick={() => setIsMenuOpen(!isMenuOpen)} className="flex items-center space-x-2 p-2 rounded-lg hover:bg-gray-100">

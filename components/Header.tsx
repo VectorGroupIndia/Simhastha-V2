@@ -12,8 +12,6 @@ const Header: React.FC = () => {
   const [isLangDropdownOpen, setLangDropdownOpen] = useState(false);
   const [isMapModalOpen, setIsMapModalOpen] = useState(false);
   
-  const isPrivilegedRole = user && ['admin', 'authority', 'volunteer'].includes(user.role);
-
   const navLinkClass = ({ isActive }: { isActive: boolean }) =>
     `px-4 py-2 rounded-full text-sm font-medium transition-all duration-300 transform ${isActive ? 'bg-white/20 text-white shadow-lg' : 'text-slate-300 hover:bg-white/10 hover:text-white hover:scale-105'}`;
 
@@ -45,7 +43,7 @@ const Header: React.FC = () => {
         <div className="container mx-auto px-4 sm:px-6 lg:px-8">
           <nav className="mt-4 flex items-center justify-between p-3 bg-white/10 backdrop-blur-md rounded-xl border border-white/20 shadow-2xl" aria-label="Global">
             <div className="flex lg:flex-1">
-              <Link to={isPrivilegedRole && dashboardLink ? dashboardLink.path : "/"} className="-m-1.5 p-1.5">
+              <Link to="/" className="-m-1.5 p-1.5">
                 <span className="sr-only">Foundtastic</span>
                 <span className="text-2xl font-bold text-white">found<span className="text-brand-secondary">tastic</span></span>
               </Link>
@@ -113,7 +111,7 @@ const Header: React.FC = () => {
           <div className="fixed inset-0 z-50 bg-black/30" onClick={() => setIsMenuOpen(false)} />
           <div className="fixed inset-y-0 right-0 z-50 w-full overflow-y-auto bg-brand-bg px-6 py-6 sm:max-w-sm sm:ring-1 sm:ring-white/10">
             <div className="flex items-center justify-between">
-              <Link to={isPrivilegedRole && dashboardLink ? dashboardLink.path : "/"} className="-m-1.5 p-1.5">
+               <Link to="/" className="-m-1.5 p-1.5">
                 <span className="text-2xl font-bold text-white">found<span className="text-brand-secondary">tastic</span></span>
               </Link>
               <button

@@ -95,7 +95,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                 if (userAuth && userAuth.password === pass) {
                     const userToLogin = users.find(u => u.email.toLowerCase() === email.toLowerCase());
                     if (!userToLogin) {
-                        reject(new Error('User data not found.'));
+                        // This case should ideally not happen if data is consistent
+                        reject(new Error('User data not found despite correct password.'));
                         return;
                     }
 

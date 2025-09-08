@@ -1,6 +1,6 @@
-import React, { createContext, useState, useContext, ReactNode } from 'react';
+import React, { createContext, useState, useContext, ReactNode, useEffect } from 'react';
 import { uiStrings } from '../translations';
-import { Report } from '../pages/ProfilePage'; // Assuming Report type is exported
+import { Report } from '../pages/ProfilePage';
 
 type Language = 'English' | 'हिंदी' | 'मराठी';
 type UiStrings = typeof uiStrings.English;
@@ -16,17 +16,34 @@ interface LanguageContextType {
 const LanguageContext = createContext<LanguageContextType | undefined>(undefined);
 
 export const LanguageProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-    const [language, setLanguage] = useState<Language>('English');
+    const [language, setLanguageState] = useState<Language>(() => {
+        try {
+            const savedLang = localStorage.getItem('foundtastic-language');
+            return savedLang && ['English', 'हिंदी', 'मराठी'].includes(savedLang)
+                ? (savedLang as Language)
+                : 'English';
+        } catch {
+            return 'English';
+        }
+    });
 
-    // FIX: The `uiStrings` object for Hindi and Marathi are initially incomplete
-    // and are populated with English fallbacks at runtime in `translations.ts`.
-    // We use a type assertion here to inform TypeScript of the final shape of the object,
-    // ensuring `t` conforms to the `UiStrings` type which is based on the complete English strings.
+    useEffect(() => {
+        try {
+            localStorage.setItem('foundtastic-language', language);
+        } catch (error) {
+            console.error("Could not save language to localStorage", error);
+        }
+    }, [language]);
+
+    const setLanguage = (lang: Language) => {
+        setLanguageState(lang);
+    };
+    
     const t = uiStrings[language] as UiStrings;
 
     const translateStatus = (status: ReportStatus): string => {
         // Fallback to English status if translation is missing
-        return uiStrings[language].status[status] || uiStrings.English.status[status];
+        return t.status[status] || uiStrings.English.status[status];
     };
 
     return (

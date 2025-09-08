@@ -1,5 +1,3 @@
-
-
 import React from 'react';
 import { ReportData } from '../../pages/ReportFlowPage';
 import { useLanguage } from '../../contexts/LanguageContext';

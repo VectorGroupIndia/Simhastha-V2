@@ -22,7 +22,7 @@ const PhoneIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
     </svg>
 );
 
-const allLanguages: { code: 'English' | 'हिंदी' | string, name: string }[] = [
+const allLanguages: { code: 'English' | 'हिंदी' | 'मराठी' | string, name: string }[] = [
   { code: 'English', name: 'English' },
   { code: 'हिंदी', name: 'हिंदी' },
   { code: 'मराठी', name: 'मराठी' },
