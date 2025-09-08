@@ -1,5 +1,6 @@
 
-import React, { useState } from 'react';
+
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useAuth } from '../contexts/AuthContext';
@@ -67,6 +68,20 @@ const ReportFlowPage: React.FC = () => {
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [matchIds, setMatchIds] = useState<string[]>([]);
     
+    useEffect(() => {
+        if (user && user.role !== 'user') {
+            const dashboardMap: { [key: string]: string } = {
+                admin: '/admin',
+                authority: '/authority',
+                volunteer: '/volunteer'
+            };
+            const redirectPath = dashboardMap[user.role];
+            if (redirectPath) {
+                navigate(redirectPath, { replace: true });
+            }
+        }
+    }, [user, navigate]);
+
     const stepTitles: { [key in Step]: string } = {
         auth: t.stepAuth,
         instructions: t.stepInstructions,

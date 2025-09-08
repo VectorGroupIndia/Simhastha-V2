@@ -9,6 +9,8 @@ import ConfirmationModal from '../../components/ConfirmationModal';
 import { SosRequest } from '../volunteer/VolunteerDashboard';
 import AuthoritySidebar from './components/AuthoritySidebar';
 import { Link } from 'react-router-dom';
+import { useAuth, FullUser } from '../../contexts/AuthContext';
+import ProfileModal from '../../components/ProfileModal';
 
 // Icons
 const SosIcon = (props: React.SVGProps<SVGSVGElement>) => <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="2" stroke="currentColor" {...props}><path strokeLinecap="round" strokeLinejoin="round" d="M18.364 5.636a9 9 0 010 12.728M11.636 8.364a5 5 0 010 7.072M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>;
@@ -28,6 +30,7 @@ const StatCard: React.FC<{ title: string; value: string | number; icon: React.Re
 
 const AuthorityDashboard: React.FC = () => {
     const { t, translateStatus } = useLanguage();
+    const { user } = useAuth();
     const [pendingReports, setPendingReports] = useState<Report[]>([]);
     const [allReports, setAllReports] = useState<Report[]>([]);
     const [sosRequests, setSosRequests] = useState<SosRequest[]>([]);
@@ -37,6 +40,7 @@ const AuthorityDashboard: React.FC = () => {
     const [broadcastSuccess, setBroadcastSuccess] = useState(false);
     const [reportToAction, setReportToAction] = useState<{ report: Report; action: 'verify' | 'reject' } | null>(null);
     const volunteers = mockUsers.filter(u => u.role === 'volunteer');
+    const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
 
     const loadSosData = () => {
         try {
@@ -212,7 +216,7 @@ const AuthorityDashboard: React.FC = () => {
         <div className="flex min-h-screen bg-gray-50">
             <AuthoritySidebar />
             <main className="flex-1 p-8">
-                <DashboardHeader title={t.authorityDashboardTitle} />
+                <DashboardHeader title={t.authorityDashboardTitle} onProfileClick={() => setIsProfileModalOpen(true)} />
                 
                  <div className="mb-8 bg-white p-6 rounded-lg shadow-md">
                     <h2 className="text-xl font-bold text-gray-800 mb-4 flex items-center">
@@ -239,7 +243,8 @@ const AuthorityDashboard: React.FC = () => {
                 </div>
 
                 {/* Stats Grid */}
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                    <StatCard title="Assigned Zone" value={user?.assignedZone || 'N/A'} icon={<svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" /></svg>} />
                     <StatCard title={t.authorityPendingVerification} value={pendingReports.length} icon={<svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>} />
                     <StatCard title={t.authorityActiveVolunteers} value={volunteers.filter(v => v.status === 'active').length} icon={<svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.653-.124-1.282-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.653.124-1.282.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" /></svg>} />
                     <StatCard title={t.authorityResolvedToday} value={7} icon={<svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>} />
@@ -418,6 +423,14 @@ const AuthorityDashboard: React.FC = () => {
                         </div>
                     </div>
                  </div>
+            )}
+
+            {user && (
+                <ProfileModal 
+                    isOpen={isProfileModalOpen}
+                    onClose={() => setIsProfileModalOpen(false)}
+                    user={user as FullUser}
+                />
             )}
         </div>
     );

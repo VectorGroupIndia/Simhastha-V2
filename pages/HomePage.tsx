@@ -2,6 +2,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { useLanguage } from '../contexts/LanguageContext';
+import { useAuth } from '../contexts/AuthContext';
 
 const WhatsAppIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
@@ -37,6 +38,7 @@ const allLanguages: { code: 'English' | 'हिंदी' | string, name: string
 
 const HomePage: React.FC = () => {
   const { language, setLanguage, t } = useLanguage();
+  const { user } = useAuth();
 
   const handleLanguageClick = (e: React.MouseEvent<HTMLButtonElement>, langCode: string) => {
     e.preventDefault();
@@ -67,10 +69,12 @@ const HomePage: React.FC = () => {
             {t.homeEvent}
           </p>
           <div className="mt-10">
+            {(!user || user.role === 'user') && (
               <Link to="/report" className="group relative inline-block rounded-md bg-brand-secondary px-8 py-4 text-lg font-semibold text-white shadow-lg hover:shadow-[0_0_25px_rgba(234,88,12,0.7)] transition-all duration-300 transform hover:scale-105 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-secondary">
                 <span className="absolute inset-0 bg-white/20 opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-md"></span>
                 {t.homeButton}
               </Link>
+            )}
           </div>
         </div>
       </div>

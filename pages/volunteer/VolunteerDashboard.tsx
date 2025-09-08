@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { useLanguage } from '../../contexts/LanguageContext';
-import { useAuth } from '../../contexts/AuthContext';
+import { useAuth, FullUser } from '../../contexts/AuthContext';
 import { mockReports, mockAnnouncements, mockVolunteerTasks, mockSosRequests } from '../../data/mockData';
 import DashboardHeader from '../../components/DashboardHeader';
 import ConfirmationModal from '../../components/ConfirmationModal';
 import { Link } from 'react-router-dom';
 import { Report } from '../ProfilePage';
+import ProfileModal from '../../components/ProfileModal';
 
 interface Announcement {
     id: string;
@@ -44,6 +45,53 @@ const PhoneIcon = (props: React.SVGProps<SVGSVGElement>) => <svg xmlns="http://w
 const InfoIcon = (props: React.SVGProps<SVGSVGElement>) => <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" {...props}><path strokeLinecap="round" strokeLinejoin="round" d="M11.25 11.25l.041-.02a.75.75 0 011.063.852l-.708 2.836a.75.75 0 001.063.853l.041-.021M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9-3.75h.008v.008H12V8.25z" /></svg>;
 const MapIcon = (props: React.SVGProps<SVGSVGElement>) => <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" {...props}><path strokeLinecap="round" strokeLinejoin="round" d="M9 6.75V15m6-6v8.25m.503 3.498l4.875-2.437c.381-.19.622-.58.622-1.006V4.82c0-.836-.88-1.37-1.716-.998L9.75 7.5l-4.875-2.437c-.381-.19-.622-.58-.622-1.006V19.18c0 .836.88 1.37 1.716.998l4.875-2.437a1.5 1.5 0 011.022 0l4.122 2.061a1.5 1.5 0 001.022 0z" /></svg>;
 
+const VolunteerProfileCard: React.FC<{
+    user: FullUser;
+    isActive: boolean;
+    onStatusChange: (isActive: boolean) => void;
+}> = ({ user, isActive, onStatusChange }) => {
+    return (
+        <div className="bg-white p-6 rounded-lg shadow-md">
+            <div className="text-center">
+                <img src={user.avatarUrl} alt={user.name} className="w-24 h-24 rounded-full mx-auto mb-4 border-4 border-white shadow-lg" />
+                <h3 className="text-xl font-bold text-gray-800">{user.name}</h3>
+                <p className="text-sm text-brand-secondary font-semibold">{user.title}</p>
+            </div>
+            <div className="mt-4 pt-4 border-t">
+                <div className="flex items-center justify-between">
+                    <span className="font-medium text-gray-700">Your Status</span>
+                    <button
+                        type="button"
+                        onClick={() => onStatusChange(!isActive)}
+                        className={`${isActive ? 'bg-green-600' : 'bg-gray-400'} relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-brand-primary focus:ring-offset-2`}
+                    >
+                        <span className={`${isActive ? 'translate-x-5' : 'translate-x-0'} pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out`} />
+                    </button>
+                </div>
+                 <p className="text-xs text-center text-gray-500 mt-1">{isActive ? 'You are active and will receive alerts.' : 'You are on break.'}</p>
+            </div>
+             <div className="mt-4 pt-4 border-t">
+                 <h4 className="font-medium text-gray-700 mb-2">Skills</h4>
+                 <div className="flex flex-wrap gap-2">
+                    {user.skills?.map(skill => (
+                        <span key={skill} className="px-2 py-1 text-xs font-semibold rounded-full bg-blue-100 text-blue-800">{skill}</span>
+                    ))}
+                 </div>
+            </div>
+            <div className="mt-4 pt-4 border-t grid grid-cols-2 text-center">
+                <div>
+                    <p className="text-2xl font-bold text-gray-800">15</p>
+                    <p className="text-sm text-gray-500">Tasks Completed</p>
+                </div>
+                 <div>
+                    <p className="text-2xl font-bold text-gray-800">5</p>
+                    <p className="text-sm text-gray-500">People Assisted</p>
+                </div>
+            </div>
+        </div>
+    );
+};
+
 
 const VolunteerDashboard: React.FC = () => {
     const { t } = useLanguage();
@@ -55,6 +103,8 @@ const VolunteerDashboard: React.FC = () => {
     const [selectedSos, setSelectedSos] = useState<SosRequest | null>(null);
     const [sosMessage, setSosMessage] = useState('');
     const [sosToAcknowledge, setSosToAcknowledge] = useState<SosRequest | null>(null);
+    const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
+    const [isVolunteerActive, setIsVolunteerActive] = useState(true);
     const newFoundItems = mockReports.filter(r => r.type === 'found').slice(0, 5);
 
     const loadSosData = () => {
@@ -168,7 +218,7 @@ const VolunteerDashboard: React.FC = () => {
     return (
         <div className="bg-gray-50 min-h-screen">
             <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-12">
-                <DashboardHeader title={t.volunteerDashboardTitle} />
+                <DashboardHeader title={t.volunteerDashboardTitle} onProfileClick={() => setIsProfileModalOpen(true)} />
                 
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                     {/* Main operational column - REORDERED FOR UX */}
@@ -270,13 +320,7 @@ const VolunteerDashboard: React.FC = () => {
 
                     {/* Side column */}
                     <div className="space-y-8">
-                        <div className="bg-white p-6 rounded-lg shadow-md">
-                            <h2 className="text-xl font-bold text-gray-800 mb-4">{t.volunteerMyStatus}</h2>
-                            <div className="flex items-center justify-between">
-                                <p className="text-gray-900 font-semibold">{user?.name}</p>
-                                <span className="px-3 py-1 text-sm font-semibold rounded-full bg-green-100 text-green-800">{t.volunteerStatusActive}</span>
-                            </div>
-                        </div>
+                        {user && <VolunteerProfileCard user={user as FullUser} isActive={isVolunteerActive} onStatusChange={setIsVolunteerActive} />}
                         
                         <div className="bg-white p-6 rounded-lg shadow-md">
                              <Link to="/report" className="inline-flex items-center justify-center w-full px-6 py-3 border border-transparent text-base font-medium rounded-md shadow-sm text-white bg-brand-secondary hover:bg-brand-secondary/90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand-secondary mb-4">
@@ -465,6 +509,13 @@ const VolunteerDashboard: React.FC = () => {
                         </div>
                     </div>
                 </div>
+            )}
+             {user && (
+                <ProfileModal 
+                    isOpen={isProfileModalOpen}
+                    onClose={() => setIsProfileModalOpen(false)}
+                    user={user as FullUser}
+                />
             )}
         </div>
     );

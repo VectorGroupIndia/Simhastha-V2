@@ -1,11 +1,11 @@
-
-
-import React from 'react';
+import React, { useState } from 'react';
 import Sidebar from './components/Sidebar';
 import StatCard from './components/StatCard';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { mockUsers, mockReports } from '../../data/mockData';
 import DashboardHeader from '../../components/DashboardHeader';
+import ProfileModal from '../../components/ProfileModal';
+import { useAuth, FullUser } from '../../contexts/AuthContext';
 
 // Icons for Stat Cards
 const UsersIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M15 21a6 6 0 00-9-5.197m0 0A5.975 5.975 0 0112 13a5.975 5.975 0 01-3 5.197z" /></svg>;
@@ -43,6 +43,8 @@ const activityConfig: Record<ActivityAction, { icon: JSX.Element; color: string 
 
 const AdminDashboard: React.FC = () => {
     const { t } = useLanguage();
+    const { user } = useAuth();
+    const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
 
     const totalUsers = mockUsers.length;
     const activeUsers = mockUsers.filter(u => u.status === 'active').length;
@@ -77,7 +79,7 @@ const AdminDashboard: React.FC = () => {
         <div className="flex min-h-screen bg-gray-50">
             <Sidebar />
             <main className="flex-1 p-8">
-                <DashboardHeader title={t.adminDashboard} />
+                <DashboardHeader title={t.adminDashboard} onProfileClick={() => setIsProfileModalOpen(true)} />
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6">
                     <StatCard title={t.adminTotalUsers} value={totalUsers} icon={<UsersIcon />} />
                     <StatCard title={t.adminActiveUsers} value={activeUsers} icon={<ResolvedIcon />} />
@@ -105,6 +107,13 @@ const AdminDashboard: React.FC = () => {
                     </ul>
                 </div>
             </main>
+            {user && (
+                <ProfileModal 
+                    isOpen={isProfileModalOpen}
+                    onClose={() => setIsProfileModalOpen(false)}
+                    user={user as FullUser}
+                />
+            )}
         </div>
     );
 };

@@ -1,7 +1,7 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth, FullUser } from '../contexts/AuthContext';
-import { useLanguage } from '../contexts/LanguageContext';
+import { useNotification } from '../contexts/NotificationContext';
 import { Report } from './ProfilePage';
 import { SosRequest } from './volunteer/VolunteerDashboard';
 import { mockReports, mockUsers, mockHelpCenters, mockSosRequests, mockGroups, Group } from '../data/mockData';
@@ -36,8 +36,11 @@ type FilterState = {
 
 // --- ICONS (as inline components) ---
 const CloseIcon = (props: React.SVGProps<SVGSVGElement>) => <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" {...props}><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>;
-const LegendIcon = (props: React.SVGProps<SVGSVGElement>) => <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" {...props}><path strokeLinecap="round" strokeLinejoin="round" d="M8.25 6.75h7.5M8.25 12h7.5m-7.5 5.25h7.5M3.75 6.75h.007v.008H3.75V6.75zm.375 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zM3.75 12h.007v.008H3.75V12zm.375 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm-.375 5.25h.007v.008H3.75V17.25zm.375 0a.375.375 0 11-.75 0 .375.375 0 01.75 0z" /></svg>;
-const FilterIcon = (props: React.SVGProps<SVGSVGElement>) => <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" {...props}><path strokeLinecap="round" strokeLinejoin="round" d="M12 3c2.755 0 5.455.232 8.083.678.533.09.917.556.917 1.096v1.044a2.25 2.25 0 01-.659 1.591l-5.432 5.432a2.25 2.25 0 00-.659 1.591v2.927a2.25 2.25 0 01-1.244 2.013L9.75 21v-6.572a2.25 2.25 0 00-.659-1.591L3.659 7.409A2.25 2.25 0 013 5.818V4.774c0-.54.384-1.006.917-1.096A48.32 48.32 0 0112 3z" /></svg>;
+const LayersIcon = (props: React.SVGProps<SVGSVGElement>) => <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" {...props}><path strokeLinecap="round" strokeLinejoin="round" d="M12 18.75a6 6 0 006-6v-1.5a6 6 0 00-6-6v-1.5a6 6 0 00-6 6v1.5a6 6 0 006 6v1.5z" /></svg>;
+const MyLocationIcon = (props: React.SVGProps<SVGSVGElement>) => <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" {...props}><path strokeLinecap="round" strokeLinejoin="round" d="M12 21a9 9 0 100-18 9 9 0 000 18z" /><path strokeLinecap="round" strokeLinejoin="round" d="M12 3.75v.008M12 12.75h.008v.008H12v-.008zm0 5.25h.008v.008H12v-.008zm-5.25-.008h.008v.008H6.75v-.008zm10.5 0h.008v.008h-.008v-.008z" /></svg>;
+const SearchIcon = (props: React.SVGProps<SVGSVGElement>) => <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" {...props}><path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" /></svg>;
+const GeofenceIcon = (props: React.SVGProps<SVGSVGElement>) => <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" {...props}><path strokeLinecap="round" strokeLinejoin="round" d="M9 6.75V15m6-6v8.25m.503 3.498l4.875-2.437c.381-.19.622-.58.622-1.006V4.82c0-.836-.88-1.37-1.716-.998L9.75 7.5l-4.875-2.437c-.381-.19-.622-.58-.622-1.006V19.18c0 .836.88 1.37 1.716.998l4.875-2.437a1.5 1.5 0 011.022 0l4.122 2.061a1.5 1.5 0 001.022 0z" /></svg>;
+
 
 // --- HELPER FUNCTIONS ---
 const MAP_BOUNDS = { latMin: 23.15, latMax: 23.22, lngMin: 75.74, lngMax: 75.82 };
@@ -49,27 +52,42 @@ const convertCoordsToPosition = (lat?: number, lng?: number) => {
     const left = ((clampedLng - MAP_BOUNDS.lngMin) / (MAP_BOUNDS.lngMax - MAP_BOUNDS.lngMin)) * 100;
     return { top: `${Math.max(0, Math.min(100, top))}%`, left: `${Math.max(0, Math.min(100, left))}%` };
 };
+const convertPositionToCoords = (topPercent: number, leftPercent: number) => {
+    const lat = MAP_BOUNDS.latMax - (topPercent / 100) * (MAP_BOUNDS.latMax - MAP_BOUNDS.latMin);
+    const lng = MAP_BOUNDS.lngMin + (leftPercent / 100) * (MAP_BOUNDS.lngMax - MAP_BOUNDS.lngMin);
+    return { lat, lng };
+};
 
 const getItemCoords = (item: DisplayableItem) => {
     switch (item.itemType) {
         case 'cluster': return item.coords;
         case 'report': return item.coords;
-        case 'user':
-        case 'groupmember': return item.lastKnownLocation;
-        case 'sos':
-        case 'helpcenter': return item.location;
+        case 'user': case 'groupmember': return item.lastKnownLocation;
+        case 'sos': case 'helpcenter': return item.location;
         default: return undefined;
     }
 };
 
-const getMarker = (item: DisplayableItem) => {
-    const baseClasses = "absolute transform -translate-x-1/2 -translate-y-1/2 cursor-pointer z-10 p-1 rounded-full flex items-center justify-center shadow-lg";
+const getItemName = (item: DisplayableItem): string => {
+    switch (item.itemType) {
+        case 'cluster': return `${item.count} items`;
+        case 'report': return item.item;
+        case 'user': case 'groupmember': return item.name;
+        case 'sos': return item.message;
+        case 'helpcenter': return item.name;
+        default: return 'Unknown';
+    }
+}
+
+const getMarker = (item: DisplayableItem, isFaded: boolean, isActive: boolean) => {
+    const activeClasses = isActive ? 'ring-4 ring-yellow-400 z-20 scale-125' : '';
+    const baseClasses = `absolute transform -translate-x-1/2 -translate-y-1/2 cursor-pointer z-10 p-1 rounded-full flex items-center justify-center shadow-lg transition-all duration-300 ${isFaded ? 'opacity-20' : 'opacity-100'} ${activeClasses}`;
     switch (item.itemType) {
         case 'cluster':
             const size = item.count < 10 ? 32 : item.count < 50 ? 40 : 48;
             return (
                 <div
-                    className="absolute transform -translate-x-1/2 -translate-y-1/2 cursor-pointer z-20 bg-purple-600 text-white rounded-full flex items-center justify-center font-bold border-2 border-white shadow-xl"
+                    className={`absolute transform -translate-x-1/2 -translate-y-1/2 cursor-pointer z-20 bg-purple-600 text-white rounded-full flex items-center justify-center font-bold border-2 border-white shadow-xl transition-all duration-300 ${isFaded ? 'opacity-20' : 'opacity-100'} ${activeClasses}`}
                     style={{ width: `${size}px`, height: `${size}px`, fontSize: `${size / 2.5}px` }}
                     title={`${item.count} items`}
                 >
@@ -79,195 +97,88 @@ const getMarker = (item: DisplayableItem) => {
         case 'report': return <div className={`${baseClasses} ${item.type === 'lost' ? 'bg-red-500' : 'bg-green-500'} text-white w-5 h-5`} title={item.item}>!</div>;
         case 'sos': return <div className={`${baseClasses} bg-red-600 w-6 h-6 animate-pulse`}><div className="bg-white w-2 h-2 rounded-full"></div></div>;
         case 'user': return <div className={`${baseClasses} bg-blue-500 w-4 h-4 border-2 border-white`}></div>;
-        case 'groupmember': return <img src={item.avatarUrl} className="absolute transform -translate-x-1/2 -translate-y-1/2 cursor-pointer z-10 w-8 h-8 rounded-full border-2 border-purple-500 shadow-lg" title={item.name} />;
+        case 'groupmember': return <img src={item.avatarUrl} className={`absolute transform -translate-x-1/2 -translate-y-1/2 cursor-pointer z-10 w-8 h-8 rounded-full border-2 border-purple-500 shadow-lg transition-all duration-300 ${isFaded ? 'opacity-20' : 'opacity-100'} ${activeClasses}`} title={item.name} />;
         case 'helpcenter': return <div className={`${baseClasses} bg-orange-500 text-white w-6 h-6`} title={item.name}>H</div>;
         default: return null;
     }
 };
 
-const calculateDistance = (pos1: { top: number; left: number }, pos2: { top: number; left: number }): number => {
-    return Math.sqrt(Math.pow(pos1.left - pos2.left, 2) + Math.pow(pos1.top - pos2.top, 2));
+const calculateDistance = (pos1: { x: number; y: number }, pos2: { x: number; y: number }): number => {
+    return Math.sqrt(Math.pow(pos1.x - pos2.x, 2) + Math.pow(pos1.y - pos2.y, 2));
 };
 
-// --- CLUSTERING HOOK ---
-const useClustering = (items: MapItem[], distanceThreshold: number): DisplayableItem[] => {
+// --- ENHANCED CLUSTERING HOOK ---
+const useClustering = (items: MapItem[], zoom: number): DisplayableItem[] => {
+    const CLUSTER_THRESHOLD_BASE = 15; // in percent of map width/height
+    const distanceThreshold = useMemo(() => CLUSTER_THRESHOLD_BASE / zoom, [zoom]);
+
     return useMemo(() => {
         if (!items.length) return [];
 
-        const points = items
-            .map(item => {
-                const coords = getItemCoords(item);
-                if (!coords) return null;
-                const pos = convertCoordsToPosition(coords.lat, coords.lng);
-                return {
-                    item,
-                    x: parseFloat(pos.left),
-                    y: parseFloat(pos.top),
-                    clustered: false,
-                };
-            })
-            .filter(Boolean) as { item: MapItem; x: number; y: number; clustered: boolean }[];
-        
+        const points = items.map(item => {
+            const coords = getItemCoords(item);
+            if (!coords || !coords.lat || !coords.lng) return null;
+            const pos = convertCoordsToPosition(coords.lat, coords.lng);
+            return { item, x: parseFloat(pos.left), y: parseFloat(pos.top) };
+        }).filter(Boolean) as { item: MapItem; x: number; y: number }[];
+
+        const gridSize = distanceThreshold;
+        const grid: Map<string, { item: MapItem; x: number; y: number }[]> = new Map();
+        points.forEach(point => {
+            const cellX = Math.floor(point.x / gridSize);
+            const cellY = Math.floor(point.y / gridSize);
+            const key = `${cellX}_${cellY}`;
+            if (!grid.has(key)) grid.set(key, []);
+            grid.get(key)!.push(point);
+        });
+
         const clusteredItems: DisplayableItem[] = [];
+        const visited = new Set<string>();
 
-        for (let i = 0; i < points.length; i++) {
-            if (points[i].clustered) continue;
-            points[i].clustered = true;
-            
-            const clusterGroup: MapItem[] = [points[i].item];
+        points.forEach(point => {
+            if (visited.has(point.item.id)) return;
+            const cluster: MapItem[] = [];
+            const queue = [point];
+            visited.add(point.item.id);
 
-            for (let j = i + 1; j < points.length; j++) {
-                if (points[j].clustered) continue;
-                
-                const dist = calculateDistance({ left: points[i].x, top: points[i].y }, { left: points[j].x, top: points[j].y });
-                
-                if (dist < distanceThreshold) {
-                    points[j].clustered = true;
-                    clusterGroup.push(points[j].item);
+            while (queue.length > 0) {
+                const currentPoint = queue.shift()!;
+                cluster.push(currentPoint.item);
+                const cellX = Math.floor(currentPoint.x / gridSize);
+                const cellY = Math.floor(currentPoint.y / gridSize);
+
+                for (let dx = -1; dx <= 1; dx++) {
+                    for (let dy = -1; dy <= 1; dy++) {
+                        const key = `${cellX + dx}_${cellY + dy}`;
+                        if (grid.has(key)) {
+                            grid.get(key)!.forEach(neighborPoint => {
+                                if (!visited.has(neighborPoint.item.id) && calculateDistance(currentPoint, neighborPoint) < distanceThreshold) {
+                                    visited.add(neighborPoint.item.id);
+                                    queue.push(neighborPoint);
+                                }
+                            });
+                        }
+                    }
                 }
             }
-            
-            if (clusterGroup.length > 1) {
-                const avgLat = clusterGroup.reduce((sum, item) => sum + (getItemCoords(item)?.lat || 0), 0) / clusterGroup.length;
-                const avgLng = clusterGroup.reduce((sum, item) => sum + (getItemCoords(item)?.lng || 0), 0) / clusterGroup.length;
+
+            if (cluster.length > 1) {
+                const avgLat = cluster.reduce((sum, item) => sum + (getItemCoords(item)?.lat || 0), 0) / cluster.length;
+                const avgLng = cluster.reduce((sum, item) => sum + (getItemCoords(item)?.lng || 0), 0) / cluster.length;
                 clusteredItems.push({
-                    id: `cluster-${points[i].item.id}`,
+                    id: `cluster-${point.item.id}`,
                     itemType: 'cluster',
-                    count: clusterGroup.length,
+                    count: cluster.length,
                     coords: { lat: avgLat, lng: avgLng },
-                    items: clusterGroup,
+                    items: cluster,
                 });
             } else {
-                clusteredItems.push(clusterGroup[0]);
+                clusteredItems.push(cluster[0]);
             }
-        }
+        });
+
         return clusteredItems;
     }, [items, distanceThreshold]);
-};
-
-
-const LiveMapPage: React.FC = () => {
-    const { user } = useAuth();
-    const [allReports, setAllReports] = useState<Report[]>([]);
-    const [allUsers, setAllUsers] = useState<FullUser[]>([]);
-    const [allSos, setAllSos] = useState<SosRequest[]>([]);
-    const [allGroups, setAllGroups] = useState<Group[]>([]);
-    const [activeItem, setActiveItem] = useState<DisplayableItem | null>(null);
-    const [filters, setFilters] = useState<FilterState>({ lost: true, found: true, sos: true, volunteers: true, helpCenters: true, group: true, heatmap: false });
-    const [isSidebarOpen, setIsSidebarOpen] = useState(true);
-
-    useEffect(() => {
-        try {
-            setAllReports(JSON.parse(localStorage.getItem('foundtastic-all-reports') || '[]') || mockReports);
-            setAllUsers(JSON.parse(localStorage.getItem('foundtastic-all-users') || '[]') || mockUsers);
-            setAllSos(JSON.parse(localStorage.getItem('foundtastic-sos-requests') || '[]') || mockSosRequests);
-            setAllGroups(JSON.parse(localStorage.getItem('foundtastic-all-groups') || '[]') || mockGroups);
-        } catch (e) {
-            console.error("Failed to load map data", e);
-        }
-    }, []);
-
-    const handleFilterChange = (filterName: keyof FilterState) => {
-        setFilters(prev => ({ ...prev, [filterName]: !prev[filterName] }));
-    };
-
-    const mapItems = useMemo((): MapItem[] => {
-        if (!user) return [];
-        let items: MapItem[] = [];
-
-        if (filters.helpCenters) {
-            items.push(...mockHelpCenters.map(hc => ({ ...hc, itemType: 'helpcenter' as const })));
-        }
-
-        if (user.role === 'user') {
-            const userReports = allReports.filter(r => r.id.includes(`rep-${user.id}`));
-            if (filters.lost) items.push(...userReports.filter(r => r.type === 'lost').map(r => ({ ...r, itemType: 'report' as const })));
-            if (filters.found) items.push(...userReports.filter(r => r.type === 'found').map(r => ({ ...r, itemType: 'report' as const })));
-            if (filters.group && user.activeGroupId) {
-                const activeGroup = allGroups.find(g => g.id === user.activeGroupId);
-                if (activeGroup) {
-                    const groupMembers = allUsers.filter(u => activeGroup.memberIds.includes(u.id) && u.id !== user.id);
-                    items.push(...groupMembers.map(m => ({ ...m, itemType: 'groupmember' as const })));
-                }
-            }
-        }
-
-        if (user.role === 'volunteer' || user.role === 'authority') {
-            if (filters.lost) items.push(...allReports.filter(r => r.type === 'lost').map(r => ({ ...r, itemType: 'report' as const })));
-            if (filters.found) items.push(...allReports.filter(r => r.type === 'found').map(r => ({ ...r, itemType: 'report' as const })));
-            if (filters.sos) items.push(...allSos.filter(s => s.status !== 'resolved').map(s => ({ ...s, itemType: 'sos' as const })));
-            if (filters.volunteers) {
-                const volunteers = allUsers.filter(u => u.role === 'volunteer' && u.status === 'active');
-                items.push(...volunteers.map(v => ({ ...v, itemType: 'user' as const })));
-            }
-        }
-        return items;
-    }, [user, filters, allReports, allUsers, allSos, allGroups]);
-    
-    const displayableItems = useClustering(mapItems, 5); // 5% distance threshold for clustering
-
-    return (
-        <div className="flex h-screen overflow-hidden bg-gray-200">
-            {/* --- SIDEBAR --- */}
-            <aside className={`absolute md:relative z-30 bg-white/10 backdrop-blur-md text-white w-80 h-full flex flex-col transition-transform duration-300 ease-in-out ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
-                <div className="p-4 flex justify-between items-center border-b border-white/20">
-                    <h1 className="text-2xl font-bold">Live <span className="text-brand-secondary">Map</span></h1>
-                    <Link to="/" className="text-sm hover:underline text-slate-300 hover:text-white">Exit</Link>
-                </div>
-                {/* Filters */}
-                <div className="p-4 border-b border-white/20">
-                    <h2 className="font-semibold mb-2 flex items-center text-slate-100"><FilterIcon className="w-5 h-5 mr-2" /> Filters</h2>
-                    <div className="space-y-2">
-                        {user && ['authority', 'volunteer'].includes(user.role) && <>
-                            <Checkbox label="Lost Reports" checked={filters.lost} onChange={() => handleFilterChange('lost')} />
-                            <Checkbox label="Found Reports" checked={filters.found} onChange={() => handleFilterChange('found')} />
-                            <Checkbox label="SOS Alerts" checked={filters.sos} onChange={() => handleFilterChange('sos')} />
-                            <Checkbox label="Volunteers" checked={filters.volunteers} onChange={() => handleFilterChange('volunteers')} />
-                        </>}
-                        {user?.role === 'user' && <Checkbox label="My Group" checked={filters.group} onChange={() => handleFilterChange('group')} />}
-                        <Checkbox label="Help Centers" checked={filters.helpCenters} onChange={() => handleFilterChange('helpCenters')} />
-                         {user?.role === 'authority' && <Checkbox label="Heatmap" checked={filters.heatmap} onChange={() => handleFilterChange('heatmap')} />}
-                    </div>
-                </div>
-                {/* Legend */}
-                <div className="p-4 flex-grow overflow-y-auto">
-                    <h2 className="font-semibold mb-2 flex items-center text-slate-100"><LegendIcon className="w-5 h-5 mr-2" /> Legend</h2>
-                    <ul className="space-y-2 text-sm text-slate-200">
-                        <LegendItem color="bg-purple-600" text="Clustered Items" />
-                        <LegendItem color="bg-red-500" text="Lost Report" />
-                        <LegendItem color="bg-green-500" text="Found Report" />
-                        <LegendItem color="bg-red-600 animate-pulse" text="SOS Alert" />
-                        <LegendItem color="bg-blue-500" text="Volunteer" />
-                        <LegendItem color="border-purple-500 border-2" text="Group Member" />
-                        <LegendItem color="bg-orange-500" text="Help Center" />
-                    </ul>
-                </div>
-            </aside>
-
-            {/* --- MAP AREA --- */}
-            <main className="flex-1 relative">
-                 <button onClick={() => setIsSidebarOpen(!isSidebarOpen)} className="absolute top-4 left-4 z-40 p-2 bg-white rounded-md shadow-lg md:hidden">
-                    {isSidebarOpen ? <CloseIcon className="w-6 h-6" /> : <FilterIcon className="w-6 h-6" />}
-                </button>
-                <div className="absolute inset-0">
-                    <iframe className="w-full h-full border-0 grayscale-[50%]" loading="lazy" allowFullScreen referrerPolicy="no-referrer-when-downgrade" src={`https://maps.google.com/maps?q=Ujjain&t=&z=14&ie=UTF8&iwloc=&output=embed&styles=featureType:all|elementType:labels|visibility:off`}></iframe>
-                    {user?.role === 'authority' && filters.heatmap && (
-                        <>
-                            <div className="absolute w-64 h-64 bg-red-500/30 rounded-full blur-3xl" style={{ top: '30%', left: '40%' }}></div>
-                            <div className="absolute w-48 h-48 bg-orange-500/20 rounded-full blur-2xl" style={{ top: '60%', left: '60%' }}></div>
-                        </>
-                    )}
-                </div>
-                {displayableItems.map((item) => {
-                    const coords = getItemCoords(item);
-                    const position = convertCoordsToPosition(coords?.lat, coords?.lng);
-                    return <button key={item.id} onClick={() => setActiveItem(item)} className="absolute" style={position}>{getMarker(item)}</button>;
-                })}
-
-                {activeItem && <InfoWindow item={activeItem} onClose={() => setActiveItem(null)} />}
-            </main>
-        </div>
-    );
 };
 
 // --- SUB-COMPONENTS for LiveMapPage ---
@@ -278,17 +189,90 @@ const Checkbox: React.FC<{ label: string; checked: boolean; onChange: () => void
     </label>
 );
 
-const LegendItem: React.FC<{ color: string; text: string; }> = ({ color, text }) => (
-    <li className="flex items-center">
-        <span className={`w-4 h-4 rounded-full mr-2 flex-shrink-0 ${color}`}></span>
-        <span>{text}</span>
-    </li>
+const LayerControls: React.FC<{ filters: FilterState; onFilterChange: (filterName: keyof FilterState) => void; userRole: string | undefined }> = ({ filters, onFilterChange, userRole }) => (
+    <div className="absolute top-16 left-4 z-20 bg-black/50 backdrop-blur-md text-white p-4 rounded-lg shadow-2xl w-60">
+        <h2 className="font-semibold mb-2 flex items-center text-slate-100"><LayersIcon className="w-5 h-5 mr-2" /> Layers</h2>
+        <div className="space-y-2">
+            {userRole && ['authority', 'volunteer'].includes(userRole) && <>
+                <Checkbox label="Lost Reports" checked={filters.lost} onChange={() => onFilterChange('lost')} />
+                <Checkbox label="Found Reports" checked={filters.found} onChange={() => onFilterChange('found')} />
+                <Checkbox label="SOS Alerts" checked={filters.sos} onChange={() => onFilterChange('sos')} />
+                <Checkbox label="Volunteers" checked={filters.volunteers} onChange={() => onFilterChange('volunteers')} />
+            </>}
+            {userRole === 'user' && <Checkbox label="My Group" checked={filters.group} onChange={() => onFilterChange('group')} />}
+            <Checkbox label="Help Centers" checked={filters.helpCenters} onChange={() => onFilterChange('helpCenters')} />
+            {userRole === 'authority' && <Checkbox label="Heatmap" checked={filters.heatmap} onChange={() => onFilterChange('heatmap')} />}
+        </div>
+    </div>
 );
+
+const GeofenceControls: React.FC<{ onSet: () => void; onClear: () => void; isDrawing: boolean; hasGeofence: boolean; }> = ({ onSet, onClear, isDrawing, hasGeofence }) => (
+    <div className="absolute top-16 right-4 z-20 bg-black/50 backdrop-blur-md text-white p-4 rounded-lg shadow-2xl w-60">
+        <h2 className="font-semibold mb-2 flex items-center text-slate-100"><GeofenceIcon className="w-5 h-5 mr-2" /> Geofence</h2>
+        <div className="space-y-2">
+            <button onClick={onSet} disabled={isDrawing} className="w-full text-sm py-2 px-3 bg-blue-600 rounded hover:bg-blue-700 disabled:bg-slate-500">{isDrawing ? 'Drawing...' : 'Set Safe Area'}</button>
+            {hasGeofence && <button onClick={onClear} className="w-full text-sm py-2 px-3 bg-red-600 rounded hover:bg-red-700">Clear Area</button>}
+            <p className="text-xs text-slate-300 mt-1">Click 'Set Area', then click and drag on the map to create a safe zone for your group.</p>
+        </div>
+    </div>
+);
+
+const SearchBar: React.FC<{ query: string; onQueryChange: (q: string) => void }> = ({ query, onQueryChange }) => (
+    <div className="absolute top-4 left-1/2 -translate-x-1/2 z-20 w-full max-w-sm">
+        <div className="relative">
+            <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
+                <SearchIcon className="h-5 w-5 text-gray-400" />
+            </div>
+            <input
+                type="text"
+                value={query}
+                onChange={(e) => onQueryChange(e.target.value)}
+                placeholder="Search items or people..."
+                className="block w-full rounded-full border-0 bg-white/80 py-2.5 pl-10 pr-3 text-gray-900 shadow-lg ring-1 ring-inset ring-gray-300 backdrop-blur-sm placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-brand-primary"
+            />
+        </div>
+    </div>
+);
+
+const HeatmapLayer: React.FC<{ reports: Report[] }> = ({ reports }) => (
+    <div className="absolute inset-0 pointer-events-none">
+        {reports.map(report => {
+            if(!report.coords) return null;
+            const position = convertCoordsToPosition(report.coords.lat, report.coords.lng);
+            return (
+                <div
+                    key={report.id}
+                    className="absolute rounded-full"
+                    style={{
+                        ...position,
+                        width: '100px',
+                        height: '100px',
+                        transform: 'translate(-50%, -50%)',
+                        background: 'radial-gradient(circle, rgba(255,80,0,0.4) 0%, rgba(255,80,0,0) 60%)',
+                    }}
+                />
+            );
+        })}
+    </div>
+);
+
+const UserLocationMarker: React.FC<{ lat: number; lng: number }> = ({ lat, lng }) => {
+    const position = convertCoordsToPosition(lat, lng);
+    return (
+        <div className="absolute z-30" style={position}>
+            <span className="relative flex h-5 w-5">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-sky-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-5 w-5 bg-sky-500 border-2 border-white"></span>
+            </span>
+        </div>
+    );
+};
 
 const InfoWindow: React.FC<{ item: DisplayableItem; onClose: () => void; }> = ({ item, onClose }) => {
     const coords = getItemCoords(item);
-    const position = convertCoordsToPosition(coords?.lat, coords?.lng);
-
+    if (!coords) return null;
+    const position = convertCoordsToPosition(coords.lat, coords.lng);
+    
     const renderItemContent = (subItem: MapItem) => {
         switch (subItem.itemType) {
             case 'report': return <span className={subItem.type === 'lost' ? 'text-red-600' : 'text-green-600'}>{subItem.item}</span>;
@@ -304,12 +288,13 @@ const InfoWindow: React.FC<{ item: DisplayableItem; onClose: () => void; }> = ({
             <button onClick={onClose} className="absolute top-1 right-1 text-gray-400 hover:text-gray-700"><CloseIcon className="w-5 h-5" /></button>
             <div className="p-3">
                 {item.itemType === 'cluster' ? (
-                    <div>
+                    <>
                         <h3 className="font-bold text-purple-800">{item.count} items clustered here</h3>
+                        <p className="text-xs text-slate-500">Click cluster or zoom in to see more.</p>
                         <ul className="mt-2 space-y-1 max-h-40 overflow-y-auto text-xs list-disc list-inside">
                             {item.items.map((subItem, index) => <li key={index} className="p-1 rounded">{renderItemContent(subItem)}</li>)}
                         </ul>
-                    </div>
+                    </>
                 ) : item.itemType === 'report' ? (
                     <>
                         <p className={`font-bold text-sm ${item.type === 'lost' ? 'text-red-700' : 'text-green-700'}`}>{item.item}</p>
@@ -328,11 +313,256 @@ const InfoWindow: React.FC<{ item: DisplayableItem; onClose: () => void; }> = ({
                         <p className="text-xs text-gray-500">{item.email}</p>
                     </>
                 ) : item.itemType === 'helpcenter' ? (
-                    <>
-                        <p className="font-bold text-sm text-orange-700">{item.name}</p>
-                    </>
+                    <p className="font-bold text-sm text-orange-700">{item.name}</p>
                 ) : null}
             </div>
+        </div>
+    );
+};
+
+const Tooltip: React.FC<{ item: DisplayableItem }> = ({ item }) => {
+    const coords = getItemCoords(item);
+    if (!coords) return null;
+    const position = convertCoordsToPosition(coords.lat, coords.lng);
+    return (
+        <div className="absolute bg-black/70 text-white text-xs px-2 py-1 rounded-md shadow-lg transform -translate-y-full -translate-x-1/2 z-40 pointer-events-none" style={{ ...position, top: `calc(${position.top} - 2.5rem)` }}>
+            {getItemName(item)}
+        </div>
+    );
+};
+
+const GeofenceCircle: React.FC<{ center: { x: number, y: number } | null; radius: number }> = ({ center, radius }) => {
+    if (!center || radius <= 0) return null;
+    return (
+        <div className="absolute border-2 border-dashed border-blue-400 bg-blue-500/20 rounded-full pointer-events-none"
+            style={{
+                top: `${center.y}%`,
+                left: `${center.x}%`,
+                width: `${radius * 2}%`,
+                height: `${radius * 2}%`,
+                transform: 'translate(-50%, -50%)',
+            }}
+        />
+    );
+};
+
+// --- MAIN MAP COMPONENT ---
+const LiveMapPage: React.FC = () => {
+    const { user } = useAuth();
+    const { addNotification } = useNotification();
+    const mapRef = useRef<HTMLDivElement>(null);
+
+    // Data State
+    const [allReports, setAllReports] = useState<Report[]>([]);
+    const [allUsers, setAllUsers] = useState<FullUser[]>([]);
+    const [allSos, setAllSos] = useState<SosRequest[]>([]);
+    const [allGroups, setAllGroups] = useState<Group[]>([]);
+    
+    // UI State
+    const [activeItem, setActiveItem] = useState<DisplayableItem | null>(null);
+    const [hoveredItem, setHoveredItem] = useState<DisplayableItem | null>(null);
+    const [isLayerPanelOpen, setIsLayerPanelOpen] = useState(true);
+    const [isGeofencePanelOpen, setIsGeofencePanelOpen] = useState(user?.role === 'user');
+    const [zoom, setZoom] = useState(1);
+    const [searchQuery, setSearchQuery] = useState('');
+    const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
+    const MAX_ZOOM = 5;
+
+    // Filters State
+    const [filters, setFilters] = useState<FilterState>(() => {
+        const defaultFilters = { lost: true, found: true, sos: true, volunteers: true, helpCenters: true, group: true, heatmap: false };
+        if (!user) return defaultFilters;
+        try {
+            const savedFilters = localStorage.getItem(`foundtastic-map-filters-${user.id}`);
+            return savedFilters ? JSON.parse(savedFilters) : defaultFilters;
+        } catch {
+            return defaultFilters;
+        }
+    });
+
+    // Geofence State
+    const [geofence, setGeofence] = useState<{ center: { x: number; y: number }, radius: number } | null>(null); // Stored in %
+    const [isDrawingGeofence, setIsDrawingGeofence] = useState(false);
+    const [drawingGeofence, setDrawingGeofence] = useState<{ center: { x: number, y: number } | null; radius: number }>({ center: null, radius: 0 });
+    const [alertedMembers, setAlertedMembers] = useState<string[]>([]);
+
+    // --- DATA LOADING & PERSISTENCE ---
+    useEffect(() => {
+        try {
+            setAllReports(JSON.parse(localStorage.getItem('foundtastic-all-reports') || 'null') || mockReports);
+            setAllUsers(JSON.parse(localStorage.getItem('foundtastic-all-users') || 'null') || mockUsers);
+            setAllSos(JSON.parse(localStorage.getItem('foundtastic-sos-requests') || 'null') || mockSosRequests);
+            setAllGroups(JSON.parse(localStorage.getItem('foundtastic-all-groups') || 'null') || mockGroups);
+        } catch (e) { console.error("Failed to load map data", e); }
+    }, []);
+
+    useEffect(() => {
+        if (user) {
+            localStorage.setItem(`foundtastic-map-filters-${user.id}`, JSON.stringify(filters));
+        }
+    }, [filters, user]);
+
+    // --- DATA COMPUTATION ---
+    const groupMembers = useMemo(() => {
+        if (!user?.activeGroupId) return [];
+        const activeGroup = allGroups.find(g => g.id === user.activeGroupId);
+        if (!activeGroup) return [];
+        return allUsers.filter(u => activeGroup.memberIds.includes(u.id));
+    }, [user, allGroups, allUsers]);
+
+    const mapItems = useMemo((): MapItem[] => {
+        if (!user) return [];
+        let items: MapItem[] = [];
+
+        if (filters.helpCenters) items.push(...mockHelpCenters.map(hc => ({ ...hc, itemType: 'helpcenter' as const })));
+        if (filters.lost) items.push(...allReports.filter(r => r.type === 'lost').map(r => ({ ...r, itemType: 'report' as const })));
+        if (filters.found) items.push(...allReports.filter(r => r.type === 'found').map(r => ({ ...r, itemType: 'report' as const })));
+        if (filters.sos) items.push(...allSos.filter(s => s.status !== 'resolved').map(s => ({ ...s, itemType: 'sos' as const })));
+        if (filters.volunteers) items.push(...allUsers.filter(u => u.role === 'volunteer' && u.status === 'active').map(v => ({ ...v, itemType: 'user' as const })));
+        if (filters.group) items.push(...groupMembers.map(m => ({ ...m, itemType: 'groupmember' as const })));
+        
+        if(searchQuery.trim()){
+            const lowerCaseQuery = searchQuery.toLowerCase();
+            return items.filter(item => {
+                const name = getItemName(item).toLowerCase();
+                return name.includes(lowerCaseQuery);
+            });
+        }
+        return items;
+    }, [user, filters, allReports, allUsers, allSos, groupMembers, searchQuery]);
+    
+    const displayableItems = useClustering(mapItems, zoom);
+
+    // --- GEOFENCING LOGIC ---
+    useEffect(() => {
+        if (!geofence) return;
+        const interval = setInterval(() => {
+            groupMembers.forEach(member => {
+                const memberCoords = member.lastKnownLocation;
+                if (!memberCoords || alertedMembers.includes(member.id)) return;
+                const pos = convertCoordsToPosition(memberCoords.lat, memberCoords.lng);
+                const memberPos = { x: parseFloat(pos.left), y: parseFloat(pos.top) };
+                const distance = calculateDistance(geofence.center, memberPos);
+                if (distance > geofence.radius) {
+                    addNotification({ title: 'Geofence Alert!', message: `${member.name} has left the designated safe area.` });
+                    setAlertedMembers(prev => [...prev, member.id]);
+                }
+            });
+        }, 5000); // Check every 5 seconds
+
+        return () => clearInterval(interval);
+    }, [geofence, groupMembers, addNotification, alertedMembers]);
+    
+    const clearGeofence = () => {
+        setGeofence(null);
+        setAlertedMembers([]);
+    };
+
+    // --- EVENT HANDLERS ---
+    const handleFilterChange = (filterName: keyof FilterState) => setFilters(prev => ({ ...prev, [filterName]: !prev[filterName] }));
+
+    const handleLocateMe = () => {
+        if (navigator.geolocation) {
+            navigator.geolocation.getCurrentPosition(
+                (position) => setUserLocation({ lat: position.coords.latitude, lng: position.coords.longitude }),
+                (error) => console.error("Geolocation error:", error)
+            );
+        }
+    };
+    
+    const handleMarkerClick = (item: DisplayableItem) => {
+        if (item.itemType === 'cluster') {
+            setZoom(prev => Math.min(MAX_ZOOM, prev + 1));
+            setActiveItem(null); 
+        } else {
+            setActiveItem(item);
+        }
+    };
+
+    const getMapRelativeCoords = (e: React.MouseEvent<HTMLDivElement>) => {
+        const rect = mapRef.current!.getBoundingClientRect();
+        const x = ((e.clientX - rect.left) / rect.width) * 100;
+        const y = ((e.clientY - rect.top) / rect.height) * 100;
+        return { x, y };
+    };
+
+    const handleMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
+        if (!isDrawingGeofence) return;
+        const center = getMapRelativeCoords(e);
+        setDrawingGeofence({ center, radius: 0 });
+    };
+
+    const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
+        if (!isDrawingGeofence || !drawingGeofence.center) return;
+        const currentPos = getMapRelativeCoords(e);
+        const radius = calculateDistance(drawingGeofence.center, currentPos);
+        setDrawingGeofence(prev => ({ ...prev, radius }));
+    };
+
+    const handleMouseUp = () => {
+        if (!isDrawingGeofence || !drawingGeofence.center) return;
+        setGeofence({ center: drawingGeofence.center, radius: drawingGeofence.radius });
+        setIsDrawingGeofence(false);
+        setDrawingGeofence({ center: null, radius: 0 });
+    };
+    
+    return (
+        <div className="h-screen w-screen overflow-hidden bg-gray-200 relative">
+            <header className="absolute top-4 left-4 z-20">
+                 <h1 className="text-2xl font-bold text-brand-dark bg-white/70 backdrop-blur-sm p-2 rounded-lg shadow-lg">found<span className="text-brand-secondary">tastic</span> Live Map</h1>
+            </header>
+            <Link to="/" className="absolute top-6 right-24 z-20 text-sm font-semibold bg-white/70 backdrop-blur-sm p-2 rounded-lg shadow-lg text-brand-dark hover:bg-white transition-colors">Exit Map</Link>
+            
+            <SearchBar query={searchQuery} onQueryChange={setSearchQuery} />
+
+            {isLayerPanelOpen && <LayerControls filters={filters} onFilterChange={handleFilterChange} userRole={user?.role} />}
+            {user?.role === 'user' && isGeofencePanelOpen && (
+                <GeofenceControls
+                    onSet={() => setIsDrawingGeofence(true)}
+                    onClear={clearGeofence}
+                    isDrawing={isDrawingGeofence}
+                    hasGeofence={!!geofence}
+                />
+            )}
+            
+            <div className="absolute bottom-4 right-4 z-20 flex flex-col space-y-2">
+                <button onClick={() => setIsLayerPanelOpen(p => !p)} title="Toggle Layers" className="w-12 h-12 bg-white/80 rounded-full shadow-lg text-brand-dark backdrop-blur-sm hover:bg-white transition-colors flex items-center justify-center"><LayersIcon className="w-6 h-6" /></button>
+                {user?.role === 'user' && <button onClick={() => setIsGeofencePanelOpen(p => !p)} title="Toggle Geofence" className="w-12 h-12 bg-white/80 rounded-full shadow-lg text-brand-dark backdrop-blur-sm hover:bg-white transition-colors flex items-center justify-center"><GeofenceIcon className="w-6 h-6" /></button>}
+                <button onClick={handleLocateMe} title="Find My Location" className="w-12 h-12 bg-white/80 rounded-full shadow-lg text-brand-dark backdrop-blur-sm hover:bg-white transition-colors flex items-center justify-center"><MyLocationIcon className="w-6 h-6" /></button>
+                <button onClick={() => setZoom(z => Math.min(MAX_ZOOM, z + 1))} title="Zoom In" className="w-12 h-12 bg-white/80 rounded-full shadow-lg font-bold text-2xl text-brand-dark backdrop-blur-sm hover:bg-white transition-colors disabled:opacity-50" disabled={zoom === MAX_ZOOM}>+</button>
+                <button onClick={() => setZoom(z => Math.max(1, z - 1))} title="Zoom Out" className="w-12 h-12 bg-white/80 rounded-full shadow-lg font-bold text-2xl text-brand-dark backdrop-blur-sm hover:bg-white transition-colors disabled:opacity-50" disabled={zoom === 1}>-</button>
+            </div>
+
+            <main ref={mapRef} className="w-full h-full relative" onMouseDown={handleMouseDown} onMouseMove={handleMouseMove} onMouseUp={handleMouseUp}>
+                <div className="absolute inset-0">
+                    <iframe className="w-full h-full border-0 grayscale-[50%]" loading="lazy" allowFullScreen referrerPolicy="no-referrer-when-downgrade" src={`https://maps.google.com/maps?q=Ujjain&t=&z=14&ie=UTF8&iwloc=&output=embed&styles=featureType:all|elementType:labels|visibility:off`}></iframe>
+                    {user?.role === 'authority' && filters.heatmap && <HeatmapLayer reports={allReports} />}
+                </div>
+
+                {displayableItems.map((item) => {
+                    const coords = getItemCoords(item);
+                    if (!coords) return null;
+                    const position = convertCoordsToPosition(coords.lat, coords.lng);
+                    const isActive = activeItem?.id === item.id;
+                    const isFaded = searchQuery.trim() && !mapItems.some(i => i.id === item.id);
+                    return (
+                        <button key={item.id}
+                            onClick={() => handleMarkerClick(item)}
+                            onMouseEnter={() => setHoveredItem(item)}
+                            onMouseLeave={() => setHoveredItem(null)}
+                            className="absolute" style={position}>
+                            {getMarker(item, isFaded, isActive)}
+                        </button>
+                    );
+                })}
+                
+                {userLocation && <UserLocationMarker lat={userLocation.lat} lng={userLocation.lng} />}
+                <GeofenceCircle {...geofence} />
+                <GeofenceCircle {...drawingGeofence} />
+                
+                {activeItem && <InfoWindow item={activeItem} onClose={() => setActiveItem(null)} />}
+                {hoveredItem && (!activeItem || activeItem.id !== hoveredItem.id) && <Tooltip item={hoveredItem} />}
+            </main>
         </div>
     );
 };

@@ -13,6 +13,10 @@ export interface User {
   avatarUrl: string;
   groupIds: string[];
   activeGroupId: string | null;
+  title?: string;
+  phone?: string;
+  skills?: string[];
+  assignedZone?: string;
 }
 
 export interface FullUser extends User {
