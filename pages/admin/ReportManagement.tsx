@@ -4,6 +4,7 @@ import { useLanguage } from '../../contexts/LanguageContext';
 import { Report, ReportStatus } from '../ProfilePage';
 import DashboardHeader from '../../components/DashboardHeader';
 import ReportDetailsModal from '../../components/ReportDetailsModal';
+import ConfirmationModal from '../../components/ConfirmationModal';
 
 const selectStatusStyles: { [key in ReportStatus]: string } = {
     pending: 'bg-yellow-100 text-yellow-800',
@@ -26,6 +27,9 @@ const ReportManagement: React.FC = () => {
     const [viewingReport, setViewingReport] = useState<Report | null>(null);
     const [currentPage, setCurrentPage] = useState(1);
     const [reportsPerPage] = useState(10);
+    const [selectedReports, setSelectedReports] = useState<string[]>([]);
+    const [isBulkModalOpen, setIsBulkModalOpen] = useState(false);
+    const [bulkStatusToApply, setBulkStatusToApply] = useState<ReportStatus | null>(null);
     
     useEffect(() => {
         try {
@@ -123,6 +127,51 @@ const ReportManagement: React.FC = () => {
         setEndDate('');
         setCurrentPage(1);
     };
+    
+    const handleSelectReport = (id: string) => {
+        setSelectedReports(prev => 
+            prev.includes(id) ? prev.filter(reportId => reportId !== id) : [...prev, id]
+        );
+    };
+
+    const handleSelectAllOnPage = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const pageReportIds = paginatedReports.map(r => r.id);
+        if (e.target.checked) {
+            setSelectedReports(prev => [...new Set([...prev, ...pageReportIds])]);
+        } else {
+            setSelectedReports(prev => prev.filter(id => !pageReportIds.includes(id)));
+        }
+    };
+    
+    const isAllOnPageSelected = useMemo(() => {
+        const pageReportIds = paginatedReports.map(r => r.id);
+        return pageReportIds.length > 0 && pageReportIds.every(id => selectedReports.includes(id));
+    }, [paginatedReports, selectedReports]);
+    
+    const isSomeOnPageSelected = useMemo(() => {
+        const pageReportIds = paginatedReports.map(r => r.id);
+        return pageReportIds.some(id => selectedReports.includes(id)) && !isAllOnPageSelected;
+    }, [paginatedReports, selectedReports, isAllOnPageSelected]);
+
+    const handleBulkStatusChangeRequest = (status: ReportStatus) => {
+        if (!status) return;
+        setBulkStatusToApply(status);
+        setIsBulkModalOpen(true);
+    };
+
+    const handleConfirmBulkUpdate = () => {
+        if (!bulkStatusToApply) return;
+
+        const updatedReports = reports.map(report =>
+            selectedReports.includes(report.id) ? { ...report, status: bulkStatusToApply } : report
+        );
+        setReports(updatedReports);
+        localStorage.setItem('foundtastic-all-reports', JSON.stringify(updatedReports));
+
+        setSelectedReports([]);
+        setBulkStatusToApply(null);
+        setIsBulkModalOpen(false);
+    };
 
     const allStatuses: ReportStatus[] = ['pending', 'in_review', 'resolved', 'closed'];
 
@@ -134,7 +183,6 @@ const ReportManagement: React.FC = () => {
 
                 <div className="bg-white p-6 rounded-lg shadow-md">
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-4 mb-4 items-end">
-                        {/* Search Input */}
                         <div className="sm:col-span-2 lg:col-span-6">
                             <label htmlFor="search" className="sr-only">{t.adminSearchReports}</label>
                             <input
@@ -146,8 +194,6 @@ const ReportManagement: React.FC = () => {
                                 className="block w-full px-3 py-2 bg-white border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-brand-primary focus:border-brand-primary"
                             />
                         </div>
-
-                        {/* Type Filter */}
                         <div className="lg:col-span-1">
                             <label htmlFor="typeFilter" className="block text-sm font-medium text-slate-700">{t.adminReportsTableHeadType}</label>
                             <select
@@ -161,8 +207,6 @@ const ReportManagement: React.FC = () => {
                                 <option value="found">{t.adminReportTypeFound}</option>
                             </select>
                         </div>
-
-                        {/* Status Filter */}
                         <div className="lg:col-span-1" ref={statusDropdownRef}>
                             <label htmlFor="statusFilter" className="block text-sm font-medium text-slate-700">{t.adminReportsTableHeadStatus}</label>
                             <div className="relative mt-1">
@@ -197,8 +241,6 @@ const ReportManagement: React.FC = () => {
                                 )}
                             </div>
                         </div>
-                        
-                        {/* Date Filters */}
                         <div>
                             <label htmlFor="startDate" className="block text-sm font-medium text-slate-700">{t.dateFrom}</label>
                             <input type="date" id="startDate" value={startDate} onChange={(e) => setStartDate(e.target.value)} className="mt-1 block w-full px-3 py-2 bg-white border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-brand-primary focus:border-brand-primary"/>
@@ -207,8 +249,6 @@ const ReportManagement: React.FC = () => {
                             <label htmlFor="endDate" className="block text-sm font-medium text-slate-700">{t.dateTo}</label>
                             <input type="date" id="endDate" value={endDate} onChange={(e) => setEndDate(e.target.value)} className="mt-1 block w-full px-3 py-2 bg-white border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-brand-primary focus:border-brand-primary"/>
                         </div>
-
-                        {/* Sort Filter */}
                         <div className="lg:col-span-1">
                             <label htmlFor="sortOption" className="block text-sm font-medium text-slate-700">{t.profileSortBy}</label>
                             <select
@@ -225,8 +265,6 @@ const ReportManagement: React.FC = () => {
                                 <option value="status_desc">{t.sortStatusZA}</option>
                             </select>
                         </div>
-
-                        {/* Clear Button */}
                         <div className="lg:col-span-1">
                             <label className="block text-sm font-medium text-slate-700 invisible">Clear</label>
                             <button onClick={clearFilters} className="mt-1 w-full px-4 py-2 bg-slate-600 text-white font-semibold text-sm rounded-md hover:bg-slate-700 transition-colors">
@@ -235,10 +273,42 @@ const ReportManagement: React.FC = () => {
                         </div>
                     </div>
 
+                    {selectedReports.length > 0 && (
+                        <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg flex items-center gap-4">
+                            <span className="text-sm font-semibold text-blue-800">
+                                {t.bulkActionsWithCount.replace('{count}', selectedReports.length.toString())}
+                            </span>
+                            <select
+                                onChange={(e) => handleBulkStatusChangeRequest(e.target.value as ReportStatus)}
+                                className="block px-3 py-1.5 bg-white border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-brand-primary focus:border-brand-primary"
+                                value=""
+                            >
+                                <option value="" disabled>{t.changeStatus}...</option>
+                                {allStatuses.map(status => (
+                                    <option key={status} value={status}>{t.status[status]}</option>
+                                ))}
+                            </select>
+                        </div>
+                    )}
+
                     <div className="overflow-x-auto">
                         <table className="min-w-full divide-y divide-gray-200">
                             <thead className="bg-gray-50">
                                 <tr>
+                                    <th className="p-4 w-4">
+                                        <input 
+                                            type="checkbox"
+                                            className="h-4 w-4 rounded border-gray-300 text-brand-primary focus:ring-brand-primary"
+                                            checked={isAllOnPageSelected}
+                                            // FIX: The ref callback was implicitly returning a boolean, causing a type error. The arrow function's body is wrapped in curly braces to ensure it returns void.
+                                            ref={el => {
+                                                if (el) {
+                                                    el.indeterminate = isSomeOnPageSelected;
+                                                }
+                                            }}
+                                            onChange={handleSelectAllOnPage}
+                                        />
+                                    </th>
                                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{t.adminReportsTableHeadItem}</th>
                                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{t.adminReportsTableHeadType}</th>
                                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{t.adminReportsTableHeadMatches}</th>
@@ -249,7 +319,15 @@ const ReportManagement: React.FC = () => {
                             </thead>
                             <tbody className="bg-white divide-y divide-gray-200">
                                 {paginatedReports.map((report) => (
-                                    <tr key={report.id}>
+                                    <tr key={report.id} className={selectedReports.includes(report.id) ? 'bg-blue-50' : ''}>
+                                        <td className="px-4 py-4 whitespace-nowrap">
+                                            <input 
+                                                type="checkbox"
+                                                className="h-4 w-4 rounded border-gray-300 text-brand-primary focus:ring-brand-primary"
+                                                checked={selectedReports.includes(report.id)}
+                                                onChange={() => handleSelectReport(report.id)}
+                                            />
+                                        </td>
                                         <td className="px-6 py-4 whitespace-nowrap">
                                             <div className="flex items-center">
                                                 <div className="flex-shrink-0 h-10 w-10">
@@ -305,6 +383,15 @@ const ReportManagement: React.FC = () => {
                     </div>
                 </div>
                 {viewingReport && <ReportDetailsModal report={viewingReport} onClose={() => setViewingReport(null)} />}
+                 <ConfirmationModal
+                    isOpen={isBulkModalOpen}
+                    onClose={() => setIsBulkModalOpen(false)}
+                    onConfirm={handleConfirmBulkUpdate}
+                    title={t.bulkChangeStatusTitle}
+                    message={<p>{t.bulkChangeStatusBody.replace('{count}', selectedReports.length.toString()).replace('{status}', bulkStatusToApply ? t.status[bulkStatusToApply] : '')}</p>}
+                    confirmText={t.confirmButton}
+                    variant="warning"
+                />
             </main>
         </div>
     );

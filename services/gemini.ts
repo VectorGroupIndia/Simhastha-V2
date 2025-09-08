@@ -56,15 +56,15 @@ const analyzeItemImageLive = async (
     };
 
     const textPart = {
-        text: `Analyze the image of this item for a lost and found website. Based on the image, provide:
-1.  A concise title (e.g., 'Black Leather Wallet', 'Silver iPhone 13').
-2.  A helpful description of the item.
-3.  The most appropriate category from this list: ${CATEGORIES.join(', ')}.
-4.  A specific subcategory (e.g., 'Headphones', 'Backpack', 'Passport').
-5.  The item's brand, if identifiable.
-6.  The primary color.
-7.  The primary material (e.g., 'Leather', 'Plastic').
-8.  Any unique identifying marks visible, such as scratches, stickers, cracks, or other distinct features. If none are visible, this can be an empty string.`
+        text: `You are an expert item identifier for a lost and found platform. Analyze the provided image and return a single, minified JSON object with the following structure. Do not include any markdown formatting like \`\`\`json.
+- "title": A concise title (e.g., "Black Leather Wallet", "Silver iPhone 13").
+- "description": A helpful, detailed description of the item.
+- "category": The most appropriate category from this exact list: [${CATEGORIES.join(', ')}].
+- "subcategory": A specific subcategory (e.g., "Headphones", "Backpack", "Passport").
+- "brand": The item's brand, if identifiable. If not, use an empty string.
+- "color": The primary color. If not clear, use an empty string.
+- "material": The primary material (e.g., "Leather", "Plastic"). If not clear, use an empty string.
+- "identifyingMarks": Any unique marks like scratches, stickers, or defects. If none, use an empty string.`
     };
 
     const response = await ai.models.generateContent({
@@ -226,19 +226,24 @@ const findMatchingReportsLive = async (sourceReport: Report, candidates: Report[
             location: c.location
         }));
 
-        const promptText = `You are an intelligent assistant for a lost and found platform. Your task is to find potential matches for a given report from a list of candidate reports.
-A match should be considered likely if the items are very similar in category, description, color, brand, and reported in a similar location.
+        const promptText = `You are an intelligent assistant for a lost and found platform. Your task is to find potential matches for a given report from a list of candidate reports. Your response must be a single, minified JSON object with one key: "matchedReportIds", which is an array of strings. Do not include any markdown formatting.
 
-Here is the source report (this is a '${sourceReport.type}' report):
+**Matching Criteria (Strict):**
+A match is a strong potential match ONLY if it meets these criteria:
+1.  **Item Similarity:** The items must be very similar in name, description, color, brand, etc.
+2.  **Location Proximity:** The reported locations must be reasonably close to each other. This is a high-priority factor.
+${sourceReport.imageUrl ? "3. **Visual Confirmation:** An image of the source item is provided. This is the MOST IMPORTANT factor. The description of a candidate report MUST align with the visual characteristics in the image. If the description contradicts the image (e.g., wrong color, different brand visible), it is NOT a match." : ""}
+
+**Source Report Details ('${sourceReport.type}' report):**
 - Item Name: ${sourceReport.item}
 - Description: ${sourceReport.description}
 - Location: ${sourceReport.location}
-${sourceReport.imageUrl ? "An image of the source item is also provided. Use it for visual comparison against the descriptions of the candidate items." : ""}
 
-Here is a list of candidate reports to check against (these are all '${candidates[0]?.type || ''}' reports):
+**Candidate Reports to evaluate ('${candidates[0]?.type || ''}' reports):**
 ${JSON.stringify(candidateSummaries)}
 
-Analyze the reports, using both the text and the provided image of the source item, and return a JSON object containing only the IDs of the reports from the candidate list that are a strong potential match. Be very strict in your matching. Only include IDs with a high probability of being the same item.`;
+Based on the strict criteria above, return a JSON object containing only the IDs of the strong potential matches. If no reports meet the criteria, return an empty array.
+Example response: {"matchedReportIds": ["rep2", "rep14"]}`;
 
         const textPart = { text: promptText };
         

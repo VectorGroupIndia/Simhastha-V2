@@ -196,6 +196,9 @@ const ReportsTab: React.FC<{ reports: Report[]; onSelectReport: (report: Report)
                             <option value="date_desc">{t.sortDateNewest}</option>
                             <option value="date_asc">{t.sortDateOldest}</option>
                             <option value="item_asc">{t.sortItemAZ}</option>
+                            <option value="item_desc">{t.sortItemZA}</option>
+                            <option value="status_asc">{t.sortStatusAZ}</option>
+                            <option value="status_desc">{t.sortStatusZA}</option>
                         </select>
                     </div>
                     <div className="grid grid-cols-2 gap-2">
