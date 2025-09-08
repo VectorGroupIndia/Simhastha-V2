@@ -14,6 +14,7 @@ export type ReportStatus = 'pending' | 'in_review' | 'resolved' | 'closed';
 
 export interface Report {
     id: string;
+    reporterId: string;
     reportCategory: 'item' | 'person';
     type: 'lost' | 'found';
     // Union for item name or person name
@@ -53,23 +54,28 @@ const ProfilePage: React.FC = () => {
     
     const [activeTab, setActiveTab] = useState<ActiveTab>('reports');
     const [selectedReport, setSelectedReport] = useState<Report | null>(null);
-    const [reports, setReports] = useState<Report[]>([]);
+    const [allReports, setAllReports] = useState<Report[]>([]);
 
     useEffect(() => {
         try {
             const allReportsStr = localStorage.getItem('foundtastic-all-reports');
             if (allReportsStr) {
-                setReports(JSON.parse(allReportsStr)); 
+                setAllReports(JSON.parse(allReportsStr)); 
             }
         } catch (e) { console.error("Failed to load reports", e); }
     }, []);
 
+    const userReports = useMemo(() => {
+        if (!user) return [];
+        return allReports.filter(r => r.reporterId === user.id);
+    }, [allReports, user]);
+
     const reportSummary = useMemo(() => {
-        const lostCount = reports.filter(r => r.type === 'lost').length;
-        const foundCount = reports.filter(r => r.type === 'found').length;
-        const resolvedCount = reports.filter(r => r.status === 'resolved').length;
+        const lostCount = userReports.filter(r => r.type === 'lost').length;
+        const foundCount = userReports.filter(r => r.type === 'found').length;
+        const resolvedCount = userReports.filter(r => r.status === 'resolved').length;
         return { lostCount, foundCount, resolvedCount };
-    }, [reports]);
+    }, [userReports]);
 
     if (!user) {
         return (
@@ -136,7 +142,7 @@ const ProfilePage: React.FC = () => {
 
                     {/* Tab Content */}
                     <div className="bg-white/10 backdrop-blur-lg p-6 rounded-b-2xl border-x border-b border-white/20 shadow-2xl">
-                        {activeTab === 'reports' && <ReportsTab reports={reports} onSelectReport={setSelectedReport} />}
+                        {activeTab === 'reports' && <ReportsTab reports={userReports} onSelectReport={setSelectedReport} />}
                         {activeTab === 'group' && <GroupTab />}
                         {activeTab === 'activity' && <ActivityLogTab />}
                         {activeTab === 'settings' && user && <ProfileSettings user={user} />}

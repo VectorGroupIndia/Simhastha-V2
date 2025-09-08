@@ -6,7 +6,7 @@ import DashboardHeader from '../../components/DashboardHeader';
 import MissingPersonSelector from '../../components/cctv/MissingPersonSelector';
 import LiveFeedPlayer from '../../components/cctv/LiveFeedPlayer';
 import SightingsLog from '../../components/cctv/SightingsLog';
-import { mockReports } from '../../data/mockData';
+import { mockReports, mockSightings } from '../../data/mockData';
 import { useAuth } from '../../contexts/AuthContext';
 import { useNotification } from '../../contexts/NotificationContext';
 import { SosRequest } from '../volunteer/VolunteerDashboard';
@@ -38,8 +38,14 @@ const CCTVMonitoringPage: React.FC = () => {
         try {
             const storedSightings = localStorage.getItem('foundtastic-sightings');
             if (storedSightings) {
-                const parsed = JSON.parse(storedSightings).map((s: Sighting) => ({...s, timestamp: new Date(s.timestamp)}));
+// FIX: The type `s: Sighting` was an incorrect assertion, as `JSON.parse` returns objects with string timestamps, not Date objects. Changed to `s: any` for correct type handling.
+                const parsed = JSON.parse(storedSightings).map((s: any) => ({...s, timestamp: new Date(s.timestamp)}));
                 setSightings(parsed);
+            } else {
+                 // Seed from mock data if local storage is empty
+                const seededSightings = mockSightings.map(s => ({...s, timestamp: new Date(s.timestamp)}));
+                localStorage.setItem('foundtastic-sightings', JSON.stringify(seededSightings));
+                setSightings(seededSightings);
             }
         } catch (error) {
             console.error("Failed to load sightings:", error);
@@ -47,7 +53,8 @@ const CCTVMonitoringPage: React.FC = () => {
     }, []);
 
     useEffect(() => {
-        const personReports = mockReports.filter(r => r.reportCategory === 'person' && r.type === 'lost');
+        const allReports: Report[] = JSON.parse(localStorage.getItem('foundtastic-all-reports') || 'null') || mockReports;
+        const personReports = allReports.filter(r => r.reportCategory === 'person' && r.type === 'lost');
         setMissingPersonReports(personReports);
         loadSightings();
     }, [loadSightings]);

@@ -110,15 +110,22 @@ const ReportFlowPage: React.FC = () => {
     };
     
     const handleConfirm = async () => {
+        if (!user) {
+            console.error("User not logged in, cannot submit report.");
+            addNotification({ title: 'Error', message: 'You must be logged in to submit a report.' });
+            return;
+        }
         setIsSubmitting(true);
         console.log("Submitting report:", reportData);
         
         try {
             const allReportsStr = localStorage.getItem('foundtastic-all-reports');
             let allReports: Report[] = allReportsStr ? JSON.parse(allReportsStr) : [];
-
+            
+// FIX: Added required 'reporterId' property to the newReport object.
             const newReport: Report = {
                 id: `rep-${Date.now()}`,
+                reporterId: user.id,
                 reportCategory: 'item',
                 type: reportData.reportType,
                 item: reportData.itemName,

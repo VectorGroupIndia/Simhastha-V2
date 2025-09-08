@@ -24,10 +24,8 @@ const UserDetailsModal: React.FC<{ user: FullUser; onClose: () => void; }> = ({ 
         try {
             const allReportsStr = localStorage.getItem('foundtastic-all-reports');
             if (allReportsStr) {
-                // This is a mock: in a real app, reports would have a userId.
-                // Here, we'll just assign some reports to this user for demo purposes.
                 const allReports: Report[] = JSON.parse(allReportsStr);
-                const assignedReports = allReports.slice(0, 5); // Demo: show first 5 reports as this user's
+                const assignedReports = allReports.filter(r => r.reporterId === user.id);
                 setUserReports(assignedReports);
             }
         } catch (e) {
@@ -102,18 +100,15 @@ const FraudDetection: React.FC = () => {
             : ['iphone', 'laptop', 'camera', 'jewelry', 'macbook', 'dslr', 'drone'];
         const shortDescThreshold = 50;
         
-        const reportCountsByUser: { [email: string]: number } = {};
-        reports.forEach((_, index) => {
-            const user = users[index % users.length];
-            if (user) {
-                reportCountsByUser[user.email] = (reportCountsByUser[user.email] || 0) + 1;
-            }
+        const reportCountsByUserId: { [id: string]: number } = {};
+        reports.forEach(report => {
+            reportCountsByUserId[report.reporterId] = (reportCountsByUserId[report.reporterId] || 0) + 1;
         });
 
         const flaggedReports: { [id: string]: SuspiciousReport } = {};
 
-        reports.forEach((report, index) => {
-            const reporter = users[index % users.length];
+        reports.forEach(report => {
+            const reporter = users.find(u => u.id === report.reporterId);
             if (!reporter) return;
 
             // Rule 1: High-value item with a short description
@@ -128,7 +123,7 @@ const FraudDetection: React.FC = () => {
             }
 
             // Rule 2: User with high frequency of reports
-            if (reportCountsByUser[reporter.email] > HIGH_FREQUENCY_THRESHOLD) {
+            if (reportCountsByUserId[reporter.id] > HIGH_FREQUENCY_THRESHOLD) {
                 flaggedReports[report.id] = {
                     ...report,
                     reporterName: reporter.name,

@@ -113,7 +113,7 @@ const LiveFeedPlayer: React.FC<LiveFeedPlayerProps> = ({ report, onNewSighting, 
                 
                 if (result.match) {
                     setAiStatus('match_found');
-                    // FIX: Added missing status and confirmedBy properties to the new sighting object to match the expected type.
+// FIX: Added missing status and confirmedBy properties to the new sighting object to match the expected type.
                     onNewSighting({
                         reportId: report.id,
                         timestamp: new Date(),
