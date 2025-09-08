@@ -51,10 +51,27 @@ const AppContent: React.FC = () => {
     
     const isHomePage = location.pathname === '/';
     const isMapPage = location.pathname === '/live-map';
+    const isDashboardPage = location.pathname.startsWith('/admin') || 
+                            location.pathname.startsWith('/authority') || 
+                            location.pathname.startsWith('/volunteer');
+
+    let pageClasses = '';
+    if (isHomePage) {
+        pageClasses = 'bg-brand-bg';
+    } else if (isDashboardPage) {
+        // Dashboards have their own BG, so we don't apply one here.
+        pageClasses = '';
+    } else {
+        pageClasses = 'bg-brand-glass-bg text-white';
+    }
+
+    if (isMapPage) {
+        pageClasses += ' h-screen overflow-hidden';
+    }
 
     return (
-        <div className={`flex flex-col min-h-screen ${isHomePage ? 'bg-brand-bg' : 'bg-brand-glass-bg text-white'} ${isMapPage ? 'h-screen overflow-hidden' : ''}`}>
-            {!isMapPage && <Header />}
+        <div className={`flex flex-col min-h-screen ${pageClasses}`}>
+            {!(isMapPage || isDashboardPage) && <Header />}
             <main className={`flex-grow ${isMapPage ? 'h-full' : ''}`}>
                 <Routes>
                     <Route path="/" element={<HomePage />} />
@@ -85,7 +102,7 @@ const AppContent: React.FC = () => {
                     <Route path="/volunteer" element={<ProtectedRoute role="volunteer"><VolunteerDashboard /></ProtectedRoute>} />
                 </Routes>
             </main>
-            {!isMapPage && <Footer />}
+            {!(isMapPage || isDashboardPage) && <Footer />}
             {showLanguagePopup && <LanguageSelectorPopup onClose={() => setShowLanguagePopup(false)} />}
         </div>
     );

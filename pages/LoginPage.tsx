@@ -81,6 +81,7 @@ const LoginPage: React.FC = () => {
     const [password, setPassword] = useState('');
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
+    const [quickLoginRole, setQuickLoginRole] = useState<'user' | 'admin' | 'authority' | 'volunteer' | null>(null);
 
     const redirectPath = new URLSearchParams(location.search).get('redirect') || '/';
 
@@ -100,6 +101,7 @@ const LoginPage: React.FC = () => {
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setError('');
+        setQuickLoginRole(null);
         setLoading(true);
         try {
             await login(email, password);
@@ -113,6 +115,7 @@ const LoginPage: React.FC = () => {
     const handleQuickLogin = (role: 'user' | 'admin' | 'authority' | 'volunteer') => {
         setError('');
         setLoading(true);
+        setQuickLoginRole(role);
         const userToLogin = mockUsers.find(u => u.role === role);
         if (userToLogin) {
             setTimeout(async () => {
@@ -121,6 +124,7 @@ const LoginPage: React.FC = () => {
                 } catch (err: any) {
                     setError(err.message);
                     setLoading(false);
+                    setQuickLoginRole(null);
                 }
             }, 100);
         }
@@ -128,6 +132,9 @@ const LoginPage: React.FC = () => {
     
     const demoUsers = [
         mockUsers.find(u => u.role === 'user'),
+        mockUsers.find(u => u.role === 'admin'),
+        mockUsers.find(u => u.role === 'authority'),
+        mockUsers.find(u => u.role === 'volunteer'),
     ].filter(Boolean);
 
     return (
@@ -201,7 +208,7 @@ const LoginPage: React.FC = () => {
                                 disabled={loading}
                                 className="flex w-full justify-center items-center rounded-md bg-brand-secondary px-3 py-2 text-sm font-semibold leading-6 text-white shadow-sm hover:opacity-90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-secondary disabled:opacity-50"
                             >
-                                {loading ? (
+                                {loading && !quickLoginRole ? (
                                     <>
                                         <Spinner size="sm" className="mr-3" />
                                         {t.signingIn}
@@ -223,8 +230,19 @@ const LoginPage: React.FC = () => {
                             </div>
                         </div>
 
-                        <div className="mt-6">
-                            <button onClick={() => handleQuickLogin('user')} disabled={loading} className="flex w-full items-center justify-center gap-3 rounded-md bg-blue-500/80 px-3 py-2 text-white text-sm font-semibold focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-500 hover:bg-blue-600/80 disabled:opacity-50">{loading ? <Spinner size="sm" /> : t.quickLoginCitizen}</button>
+                        <div className="mt-6 grid grid-cols-2 gap-3">
+                            <button onClick={() => handleQuickLogin('user')} disabled={loading} className="flex w-full items-center justify-center gap-2 rounded-md bg-blue-500/80 px-3 py-2 text-white text-sm font-semibold focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-500 hover:bg-blue-600/80 disabled:opacity-50">
+                                {loading && quickLoginRole === 'user' ? <Spinner size="sm" /> : t.demoRoleCitizen.split('/')[0]}
+                            </button>
+                             <button onClick={() => handleQuickLogin('admin')} disabled={loading} className="flex w-full items-center justify-center gap-2 rounded-md bg-red-500/80 px-3 py-2 text-white text-sm font-semibold focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-500 hover:bg-red-600/80 disabled:opacity-50">
+                                {loading && quickLoginRole === 'admin' ? <Spinner size="sm" /> : t.demoRoleAdmin}
+                            </button>
+                             <button onClick={() => handleQuickLogin('authority')} disabled={loading} className="flex w-full items-center justify-center gap-2 rounded-md bg-purple-500/80 px-3 py-2 text-white text-sm font-semibold focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-purple-500 hover:bg-purple-600/80 disabled:opacity-50">
+                                {loading && quickLoginRole === 'authority' ? <Spinner size="sm" /> : t.demoRoleAuthority}
+                            </button>
+                             <button onClick={() => handleQuickLogin('volunteer')} disabled={loading} className="flex w-full items-center justify-center gap-2 rounded-md bg-green-500/80 px-3 py-2 text-white text-sm font-semibold focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-green-500 hover:bg-green-600/80 disabled:opacity-50">
+                                {loading && quickLoginRole === 'volunteer' ? <Spinner size="sm" /> : t.demoRoleVolunteer}
+                            </button>
                         </div>
                     </div>
                 </div>

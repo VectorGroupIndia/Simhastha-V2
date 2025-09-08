@@ -1,8 +1,8 @@
-
-import React from 'react';
-import { Link } from 'react-router-dom';
+import React, { useEffect } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useAuth } from '../contexts/AuthContext';
+import LoadingIndicator from '../components/LoadingIndicator';
 
 const WhatsAppIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
@@ -38,7 +38,22 @@ const allLanguages: { code: 'English' | 'हिंदी' | string, name: string
 
 const HomePage: React.FC = () => {
   const { language, setLanguage, t } = useLanguage();
-  const { user } = useAuth();
+  const { user, loading } = useAuth();
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    // If a logged-in user lands on the homepage, redirect them to their dashboard.
+    if (!loading && user) {
+        const dashboardMap = {
+            admin: '/admin',
+            authority: '/authority',
+            volunteer: '/volunteer',
+            user: '/profile'
+        };
+        const redirectPath = dashboardMap[user.role] || '/profile';
+        navigate(redirectPath, { replace: true });
+    }
+  }, [user, loading, navigate]);
 
   const handleLanguageClick = (e: React.MouseEvent<HTMLButtonElement>, langCode: string) => {
     e.preventDefault();
@@ -48,6 +63,20 @@ const HomePage: React.FC = () => {
       alert(`${langCode} support is coming soon!`);
     }
   };
+
+  // Show a loading state while checking auth or redirecting.
+  if (loading || user) {
+    return (
+        <div className="relative isolate overflow-hidden min-h-screen flex flex-col items-center justify-center text-white">
+            <div className="absolute -top-40 -left-40 w-96 h-96 bg-brand-primary/30 rounded-full filter blur-3xl opacity-50 animate-float"></div>
+            <div className="absolute -bottom-40 -right-40 w-96 h-96 bg-brand-secondary/30 rounded-full filter blur-3xl opacity-50 animate-float2"></div>
+            <div className="bg-white/10 backdrop-blur-lg p-8 sm:p-12 rounded-2xl border border-white/20 shadow-2xl">
+              <LoadingIndicator message="Redirecting to your dashboard..." />
+            </div>
+        </div>
+    );
+  }
+
 
   return (
     <div className="relative isolate overflow-hidden min-h-screen flex flex-col items-center justify-center pt-24 pb-12 px-6 lg:px-8 text-white">
